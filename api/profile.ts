@@ -1,0 +1,187 @@
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import {
+  readStoredProfiles,
+  writeStoredProfiles,
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+} from "./_lib/supabaseAdmin";
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const url = req.url || "";
+  const subpath = (req.query.subpath as string) || "";
+
+  // 1. GET PROFILE (GET /api/profile/:userId or /api/profile?userId=...)
+  if (req.method === "GET") {
+    let userId = (req.query.userId as string) || "";
+    if (!userId && subpath && subpath !== "personality" && subpath !== "update") {
+      userId = subpath;
+    }
+    if (!userId) {
+      const parts = url.split("?")[0].split("/").filter(Boolean);
+      const last = parts[parts.length - 1];
+      if (last && last !== "profile") {
+        userId = last;
+      }
+    }
+
+    if (!userId) {
+      res.status(400).json({ error: "User ID is required" });
+      return;
+    }
+
+    const profiles = readStoredProfiles();
+    const cached = profiles[userId];
+    if (cached) {
+      res.status(200).json({ profile: cached });
+      return;
+    }
+
+    res.status(200).json({ profile: null });
+    return;
+  }
+
+  // 2. POST PROFILE OPERATIONS (update or personality)
+  if (req.method === "POST") {
+    const isPersonality =
+      subpath === "personality" ||
+      url.includes("/personality") ||
+      (req.body && "personality" in req.body);
+
+    if (isPersonality) {
+      try {
+        const { userId, personality, authToken } = req.body || {};
+        if (!userId || !personality) {
+          res.status(400).json({ error: "userId and personality are required" });
+          return;
+        }
+
+        // Persist to server store
+        const profiles = readStoredProfiles();
+        const existing = profiles[userId] || {};
+        const updated = {
+          ...existing,
+          id: userId,
+          companion_name: personality.name,
+          companion_prompt: personality.prompt,
+          companion_avatar_url: personality.avatarUrl,
+          companion_personality: personality,
+          updated_at: new Date().toISOString(),
+        };
+        profiles[userId] = updated;
+        writeStoredProfiles(profiles);
+
+        // Synchronize to Supabase profiles table in background
+        (async () => {
+          try {
+            const headers: Record<string, string> = {
+              apikey: SUPABASE_ANON_KEY,
+              "Content-Type": "application/json",
+              Authorization: authToken
+                ? `Bearer ${authToken}`
+                : `Bearer ${SUPABASE_ANON_KEY}`,
+              Prefer: "return=representation",
+            };
+
+            const payload: Record<string, any> = {
+              companion_name: personality.name,
+              companion_prompt: personality.prompt,
+              companion_avatar_url: personality.avatarUrl,
+              companion_personality: personality,
+              updated_at: new Date().toISOString(),
+            };
+
+            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+              method: "PATCH",
+              headers,
+              body: JSON.stringify(payload),
+            }).catch(() => {});
+          } catch (e) {
+            console.warn("Background Supabase personality sync notice:", e);
+          }
+        })();
+
+        res.status(200).json({ success: true, personality, profile: updated });
+        return;
+      } catch (err) {
+        const error = err as Error;
+        res.status(500).json({ error: error.message || "Failed to save personality" });
+        return;
+      }
+    }
+
+    // Default POST: Profile update
+    try {
+      const { userId, profile, authToken } = req.body || {};
+      if (!userId || !profile) {
+        res.status(400).json({ error: "userId and profile are required" });
+        return;
+      }
+
+      // Immediately persist to server storage
+      const profiles = readStoredProfiles();
+      const existing = profiles[userId] || {};
+      const updated = {
+        ...existing,
+        ...profile,
+        id: userId,
+        updated_at: new Date().toISOString(),
+      };
+      profiles[userId] = updated;
+      writeStoredProfiles(profiles);
+
+      // Forward to Supabase database from server if applicable
+      (async () => {
+        try {
+          const headers: Record<string, string> = {
+            apikey: SUPABASE_ANON_KEY,
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
+            Authorization: authToken
+              ? `Bearer ${authToken}`
+              : `Bearer ${SUPABASE_ANON_KEY}`,
+          };
+
+          const payload: Record<string, any> = {
+            id: userId,
+            name: updated.name || updated.username || "User",
+            username: updated.username || "user",
+            bio: updated.bio || "",
+            updated_at: updated.updated_at,
+          };
+          if (updated.avatar_url && updated.avatar_url.length < 50000) {
+            payload.avatar_url = updated.avatar_url;
+          }
+          if (updated.companion_name) {
+            payload.companion_name = updated.companion_name;
+          }
+          if (updated.companion_prompt) {
+            payload.companion_prompt = updated.companion_prompt;
+          }
+          if (updated.companion_avatar_url) {
+            payload.companion_avatar_url = updated.companion_avatar_url;
+          }
+          if (updated.companion_personality) {
+            payload.companion_personality = updated.companion_personality;
+          }
+
+          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify(payload),
+          }).catch(() => {});
+        } catch (err) {
+          console.warn("Supabase background sync skipped:", err);
+        }
+      })();
+
+      res.status(200).json({ success: true, profile: updated });
+      return;
+    } catch (err) {
+      const error = err as Error;
+      res.status(500).json({ error: error.message || "Failed to update profile" });
+      return;
+    }
+  }
+
+  res.status(405).json({ error: "Method not allowed" });
+}

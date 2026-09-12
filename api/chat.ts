@@ -3,7 +3,7 @@ import {
   getGeminiClient,
   CANDIDATE_MODELS,
   getSystemInstruction,
-} from "../_lib/gemini";
+} from "./_lib/gemini";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {

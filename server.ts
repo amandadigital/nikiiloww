@@ -5,20 +5,10 @@ import dotenv from "dotenv";
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import healthHandler from "./api/health";
-import chatStreamHandler from "./api/chat/stream";
-import adminLoginHandler from "./api/admin/login";
-import adminVerifyHandler from "./api/admin/verify";
-import adminLogoutHandler from "./api/admin/logout";
-import adminPostsHandler from "./api/admin/posts/index";
-import adminPostDeleteHandler from "./api/admin/posts/[id]";
-import adminBulkDeleteHandler from "./api/admin/posts/bulk-delete";
-import adminStatsHandler from "./api/admin/stats";
-import profileGetHandler from "./api/profile/[userId]";
-import profileUpdateHandler from "./api/profile/update";
-import profilePersonalityHandler from "./api/profile/personality";
-import postsHandler from "./api/posts/index";
-import postCreateHandler from "./api/posts/create";
-import postDeleteHandler from "./api/posts/delete";
+import chatHandler from "./api/chat";
+import adminHandler from "./api/admin";
+import profileHandler from "./api/profile";
+import postsHandler from "./api/posts";
 
 dotenv.config();
 
@@ -45,26 +35,14 @@ function adapt(handler: (req: VercelRequest, res: VercelResponse) => any) {
 // VERCEL API FUNCTIONS MOUNTED TO DEV / CONTAINER SERVER
 // ==============================================================================
 app.all("/api/health", adapt(healthHandler));
-app.all("/api/chat/stream", adapt(chatStreamHandler));
-
-// Admin Moderation API Endpoints
-app.all("/api/admin/login", adapt(adminLoginHandler));
-app.all("/api/admin/verify", adapt(adminVerifyHandler));
-app.all("/api/admin/logout", adapt(adminLogoutHandler));
-app.all("/api/admin/posts/bulk-delete", adapt(adminBulkDeleteHandler));
-app.delete("/api/admin/posts/:id", adapt(adminPostDeleteHandler));
-app.all("/api/admin/posts", adapt(adminPostsHandler));
-app.all("/api/admin/stats", adapt(adminStatsHandler));
-
-// Profile Endpoints
-app.post("/api/profile/update", adapt(profileUpdateHandler));
-app.post("/api/profile/personality", adapt(profilePersonalityHandler));
-app.get("/api/profile/:userId", adapt(profileGetHandler));
-
-// Post Endpoints
-app.all("/api/posts/create", adapt(postCreateHandler));
-app.all("/api/posts/delete", adapt(postDeleteHandler));
+app.all("/api/chat", adapt(chatHandler));
+app.all("/api/chat/*", adapt(chatHandler));
+app.all("/api/admin", adapt(adminHandler));
+app.all("/api/admin/*", adapt(adminHandler));
+app.all("/api/profile", adapt(profileHandler));
+app.all("/api/profile/*", adapt(profileHandler));
 app.all("/api/posts", adapt(postsHandler));
+app.all("/api/posts/*", adapt(postsHandler));
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
