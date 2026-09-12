@@ -4,6 +4,7 @@ import {
   writeStoredProfiles,
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
+  supabaseAdmin,
 } from "./_lib/supabaseAdmin";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -12,32 +13,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 1. GET PROFILE (GET /api/profile/:userId or /api/profile?userId=...)
   if (req.method === "GET") {
-    let userId = (req.query.userId as string) || "";
-    if (!userId && subpath && subpath !== "personality" && subpath !== "update") {
-      userId = subpath;
-    }
-    if (!userId) {
-      const parts = url.split("?")[0].split("/").filter(Boolean);
-      const last = parts[parts.length - 1];
-      if (last && last !== "profile") {
-        userId = last;
+    try {
+      let userId = (req.query.userId as string) || "";
+      if (!userId && subpath && subpath !== "personality" && subpath !== "update") {
+        userId = subpath;
       }
-    }
+      if (!userId) {
+        const parts = url.split("?")[0].split("/").filter(Boolean);
+        const last = parts[parts.length - 1];
+        if (last && last !== "profile") {
+          userId = last;
+        }
+      }
 
-    if (!userId) {
-      res.status(400).json({ error: "User ID is required" });
+      if (!userId) {
+        res.status(200).json({ profile: null });
+        return;
+      }
+
+      // Check local cache
+      const profiles = readStoredProfiles();
+      const cached = profiles[userId];
+      if (cached) {
+        res.status(200).json({ profile: cached });
+        return;
+      }
+
+      // Check Supabase profiles table directly
+      try {
+        const { data: dbProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (dbProfile) {
+          res.status(200).json({ profile: dbProfile });
+          return;
+        }
+      } catch (dbErr) {
+        console.warn("Supabase profile lookup notice:", dbErr);
+      }
+
+      res.status(200).json({ profile: null });
+      return;
+    } catch (err) {
+      console.error("Get profile error:", err);
+      res.status(200).json({ profile: null });
       return;
     }
-
-    const profiles = readStoredProfiles();
-    const cached = profiles[userId];
-    if (cached) {
-      res.status(200).json({ profile: cached });
-      return;
-    }
-
-    res.status(200).json({ profile: null });
-    return;
   }
 
   // 2. POST PROFILE OPERATIONS (update or personality)

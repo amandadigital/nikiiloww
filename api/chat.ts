@@ -20,8 +20,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Set SSE headers for streaming
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform, must-revalidate");
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
 
@@ -65,7 +65,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     crossChatContext,
     customPersonality
   );
-  const ai = getGeminiClient();
+
+  let ai;
+  try {
+    ai = getGeminiClient();
+  } catch (initErr) {
+    const error = initErr as Error;
+    console.error("Gemini client initialization failed:", error);
+    res.write(
+      `data: ${JSON.stringify({
+        error: "Nikilow is having trouble connecting to AI services right now.",
+      })}\n\n`
+    );
+    res.write("data: [DONE]\n\n");
+    res.end();
+    return;
+  }
+
   let streamSuccess = false;
   let lastErrorMessage = "";
 
@@ -79,21 +95,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   for (const model of CANDIDATE_MODELS) {
     if (clientClosed) break;
     try {
-      // Race stream initialization with an 8-second timeout
-      const responseStream = await Promise.race([
-        ai.models.generateContentStream({
-          model,
-          contents,
-          config: {
-            systemInstruction,
-            temperature: 0.85,
-            topP: 0.95,
-          },
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Model ${model} timeout`)), 8000)
-        ),
-      ]);
+      // 1. Try streaming response
+      const responseStream = await ai.models.generateContentStream({
+        model,
+        contents,
+        config: {
+          systemInstruction,
+          temperature: 0.85,
+          topP: 0.95,
+        },
+      });
 
       let modelYieldedChunk = false;
       for await (const chunk of responseStream) {
@@ -102,6 +113,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (text) {
           modelYieldedChunk = true;
           res.write(`data: ${JSON.stringify({ text })}\n\n`);
+          if (typeof (res as any).flush === "function") {
+            (res as any).flush();
+          }
         }
       }
 
@@ -109,11 +123,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         streamSuccess = true;
         break; // Successfully streamed from this model
       }
+
+      // If streaming didn't yield text, try direct generateContent as fallback
+      if (!modelYieldedChunk && !clientClosed) {
+        const fullResponse = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            temperature: 0.85,
+            topP: 0.95,
+          },
+        });
+
+        if (fullResponse.text) {
+          res.write(`data: ${JSON.stringify({ text: fullResponse.text })}\n\n`);
+          streamSuccess = true;
+          break;
+        }
+      }
     } catch (err: unknown) {
       const error = err as Error;
       lastErrorMessage = error?.message || "";
-      console.warn(`model ${model} failed, checking next model:`, lastErrorMessage);
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      console.warn(`model ${model} attempt failed:`, lastErrorMessage);
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }
 

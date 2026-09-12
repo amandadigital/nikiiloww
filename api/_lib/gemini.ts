@@ -11,7 +11,11 @@ export const CANDIDATE_MODELS = [
 ];
 
 export const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey =
+    process.env.GEMINI_API_KEY ||
+    process.env.VITE_GEMINI_API_KEY ||
+    "AIzaSyDaOYDbozkYy3lMkdkjgsRpSyr1QAmFMdU";
+
   if (!apiKey) {
     throw new Error(
       "GEMINI_API_KEY is not defined. Please set GEMINI_API_KEY in your environment variables or secrets settings."

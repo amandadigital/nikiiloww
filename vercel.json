@@ -5,20 +5,20 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/chat/:path*",
+      "source": "/api/chat/stream",
       "destination": "/api/chat"
     },
     {
-      "source": "/api/posts/:path*",
-      "destination": "/api/posts?subpath=:path*"
+      "source": "/api/posts/:path+",
+      "destination": "/api/posts?subpath=:path"
     },
     {
-      "source": "/api/profile/:path*",
-      "destination": "/api/profile?subpath=:path*"
+      "source": "/api/profile/:path+",
+      "destination": "/api/profile?subpath=:path"
     },
     {
-      "source": "/api/admin/:path*",
-      "destination": "/api/admin?subpath=:path*"
+      "source": "/api/admin/:path+",
+      "destination": "/api/admin?subpath=:path"
     },
     {
       "source": "/((?!api/).*)",
