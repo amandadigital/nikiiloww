@@ -19,15 +19,22 @@ app.use(express.json({ limit: "15mb" }));
 
 // Helper to adapt Express request/response to Vercel serverless function handler
 function adapt(handler: (req: VercelRequest, res: VercelResponse) => any) {
-  return (req: express.Request, res: express.Response) => {
-    // Merge URL route params into query for complete Vercel query parameter parity
-    if (req.params) {
-      req.query = { ...req.query, ...req.params };
+  return async (req: express.Request, res: express.Response) => {
+    try {
+      // Merge URL route params into query for complete Vercel query parameter parity
+      if (req.params) {
+        req.query = { ...req.query, ...req.params };
+      }
+      await handler(
+        req as unknown as VercelRequest,
+        res as unknown as VercelResponse
+      );
+    } catch (err: any) {
+      console.error("API handler unhandled error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: err?.message || "Internal server error" });
+      }
     }
-    return handler(
-      req as unknown as VercelRequest,
-      res as unknown as VercelResponse
-    );
   };
 }
 
@@ -60,7 +67,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`nikilow server running on port ${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 

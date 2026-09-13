@@ -13,21 +13,21 @@ export const SUPABASE_URL =
 export const SUPABASE_ANON_KEY =
   process.env.VITE_SUPABASE_ANON_KEY ||
   process.env.SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBidmlzdGdvd3hraG9pZmFmdWt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MTAzOTEsImV4cCI6MjEwNDE4NjM5MX0.HFoWbRbzY2nFl-2hGDcr2-2r5oQNtIjb3B4FIFJLINM";
+  "";
 
 export const SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY ||
   process.env.SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBidmlzdGdvd3hraG9pZmFmdWt5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODYxMDM5MSwiZXhwIjoyMTA0MTg2MzkxfQ.v4ApXT2agM5jJVnetl3j-PT5zzUwrZaIBJTrOsihpL0";
+  "";
 
 export const ADMIN_PASSWORD =
   process.env.ADMIN_PASSWORD || "admin";
 
-// Initialize Supabase Admin Client using service role key (bypasses RLS)
+// Initialize Supabase Admin Client safely (uses placeholder if key is missing to prevent startup crash)
 export const supabaseAdmin = createClient(
-  SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_URL || "https://placeholder.supabase.co",
+  SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY || "placeholder-key",
   {
     auth: {
       persistSession: false,

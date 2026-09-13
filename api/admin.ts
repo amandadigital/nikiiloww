@@ -5,7 +5,7 @@ import {
   activeAdminTokens,
   supabaseAdmin,
   verifyAdminAuth,
-} from "./_lib/supabaseAdmin";
+} from "./_lib/supabaseAdmin.ts";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const url = req.url || "";
