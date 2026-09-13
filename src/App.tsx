@@ -697,7 +697,7 @@ export default function App() {
     abortControllerRef.current = abortController;
 
     try {
-      const response = await fetch('/api/chat/stream', {
+      let response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -712,6 +712,25 @@ export default function App() {
         }),
         signal: abortController.signal,
       });
+
+      // If server returned 404 for /api/chat, fall back to /api/chat/stream
+      if (response.status === 404) {
+        response = await fetch('/api/chat/stream', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: conversationHistory,
+            userProfile: userProfile
+              ? { name: userProfile.name, username: userProfile.username }
+              : undefined,
+            crossChatContext: crossChatContext || undefined,
+            customPersonality: personality,
+          }),
+          signal: abortController.signal,
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Server returned status ${response.status}`);

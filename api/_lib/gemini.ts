@@ -13,22 +13,16 @@ export const CANDIDATE_MODELS = [
 export const getGeminiClient = () => {
   const apiKey =
     process.env.GEMINI_API_KEY ||
-    process.env.VITE_GEMINI_API_KEY ||
-    "AIzaSyDaOYDbozkYy3lMkdkjgsRpSyr1QAmFMdU";
+    process.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey) {
     throw new Error(
-      "GEMINI_API_KEY is not defined. Please set GEMINI_API_KEY in your environment variables or secrets settings."
+      "GEMINI_API_KEY is not defined. Please set GEMINI_API_KEY in your Vercel Environment Variables or AI Studio Settings."
     );
   }
 
   return new GoogleGenAI({
     apiKey,
-    httpOptions: {
-      headers: {
-        "User-Agent": "aistudio-build",
-      },
-    },
   });
 };
 

@@ -72,11 +72,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (initErr) {
     const error = initErr as Error;
     console.error("Gemini client initialization failed:", error);
-    res.write(
-      `data: ${JSON.stringify({
-        error: "Nikilow is having trouble connecting to AI services right now.",
-      })}\n\n`
-    );
+    const msg =
+      error?.message ||
+      "GEMINI_API_KEY is not configured. Please add GEMINI_API_KEY in your Vercel Project Settings (Environment Variables).";
+    res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
     res.write("data: [DONE]\n\n");
     res.end();
     return;
@@ -151,15 +150,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (!streamSuccess && !clientClosed) {
+    const lower = (lastErrorMessage || "").toLowerCase();
     let friendlyError =
       "Nikilow got lost in thought for a second. Please say that again.";
+
     if (
-      lastErrorMessage.includes("503") ||
-      lastErrorMessage.includes("high demand")
+      lower.includes("leaked") ||
+      lower.includes("revoked") ||
+      lower.includes("permission_denied") ||
+      lower.includes("api key was reported as leaked")
+    ) {
+      friendlyError =
+        "The Gemini API key was reported as leaked or revoked. Please update GEMINI_API_KEY in your Vercel Project Settings (Settings -> Environment Variables) with a fresh key from Google AI Studio.";
+    } else if (
+      lower.includes("api_key_invalid") ||
+      lower.includes("api key not valid") ||
+      lower.includes("not defined")
+    ) {
+      friendlyError =
+        "GEMINI_API_KEY is invalid or missing. Please check your Vercel Environment Variables.";
+    } else if (
+      lower.includes("429") ||
+      lower.includes("quota") ||
+      lower.includes("resource_exhausted")
+    ) {
+      friendlyError =
+        "Gemini API rate limit or quota exceeded. Please wait a moment and try again.";
+    } else if (
+      lower.includes("503") ||
+      lower.includes("high demand") ||
+      lower.includes("unavailable")
     ) {
       friendlyError =
         "The servers are having a busy moment right now. Please try again in a few seconds.";
+    } else if (lastErrorMessage) {
+      friendlyError = `Nikilow error: ${lastErrorMessage}`;
     }
+
     console.error("All candidate models failed. Last error:", lastErrorMessage);
     res.write(`data: ${JSON.stringify({ error: friendlyError })}\n\n`);
   }

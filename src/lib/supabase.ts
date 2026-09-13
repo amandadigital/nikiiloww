@@ -205,7 +205,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
 
   // 1. Check server-side persistent profile store (fastest, guaranteed persistent across reloads)
   try {
-    const srvRes = await fetch(`/api/profile/${userId}`);
+    const srvRes = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`);
     if (srvRes.ok) {
       const srvData = await srvRes.json();
       if (srvData?.profile && (srvData.profile.name || srvData.profile.username)) {
@@ -379,7 +379,7 @@ export async function savePersonalityToAccount(
     const { data: sessionData } = await supabase.auth.getSession();
     const authToken = sessionData?.session?.access_token || '';
 
-    await fetch('/api/profile/personality', {
+    await fetch('/api/profile?action=personality', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -519,7 +519,7 @@ export async function updateUserProfile(
 
   // 2. Persist to server backend API immediately (guaranteed durable storage)
   try {
-    await fetch('/api/profile/update', {
+    await fetch('/api/profile?action=update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -949,7 +949,7 @@ export async function createFeedPost(
   // 1. Try saving to server API endpoint (bypasses RLS issues via service role)
   let savedToBackend = false;
   try {
-    const res = await fetch('/api/posts/create', {
+    const res = await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1077,8 +1077,8 @@ export async function deleteFeedPost(postId: string, userId?: string): Promise<b
 
   // 2. Remove via server API (service role)
   try {
-    await fetch('/api/posts/delete', {
-      method: 'POST',
+    await fetch('/api/posts', {
+      method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ postId, userId }),
     });

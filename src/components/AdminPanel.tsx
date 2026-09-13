@@ -100,7 +100,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
         return;
       }
       try {
-        const res = await fetch('/api/admin/verify', {
+        const res = await fetch('/api/admin?action=verify', {
           headers: {
             Authorization: `Bearer ${authToken}`,
             'x-admin-password': authToken,
@@ -130,7 +130,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
     if (!isAuthenticated) return;
     setIsLoadingPosts(true);
     try {
-      const res = await fetch('/api/admin/posts', {
+      const res = await fetch('/api/admin?action=posts', {
         headers: getAuthHeaders(),
       });
 
@@ -167,7 +167,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
     setLoginError(null);
 
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch('/api/admin?action=login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: passwordInput.trim() }),
@@ -196,7 +196,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
   // Handle Logout
   const handleLogout = async () => {
     try {
-      await fetch('/api/admin/logout', {
+      await fetch('/api/admin?action=logout', {
         method: 'POST',
         headers: getAuthHeaders(),
       });
@@ -218,7 +218,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
     setIsDeleting(true);
 
     try {
-      const res = await fetch(`/api/admin/posts/${encodeURIComponent(postToDelete.id)}`, {
+      const res = await fetch(`/api/admin?action=delete-post&id=${encodeURIComponent(postToDelete.id)}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
@@ -252,7 +252,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
     const idsArray = Array.from(selectedIds);
 
     try {
-      const res = await fetch('/api/admin/posts/bulk-delete', {
+      const res = await fetch('/api/admin?action=bulk-delete', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ ids: idsArray }),
