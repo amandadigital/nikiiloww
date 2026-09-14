@@ -11,6 +11,7 @@ import {
   Search,
   User,
   LogIn,
+  Palette,
 } from 'lucide-react';
 import {
   ChatSession,
@@ -20,8 +21,10 @@ import {
   DEFAULT_NIKILOW_AVATAR,
 } from '../types';
 import { formatTimeAgo } from '../utils/storage';
+import { ChatWallpaperSettings } from '../utils/wallpaper';
 import { VerifiedBadge } from './VerifiedBadge';
 import { PersonalitySettings } from './PersonalitySettings';
+import { VisualisationSettings } from './VisualisationSettings';
 
 interface SidebarProps {
   sessions: ChatSession[];
@@ -30,8 +33,8 @@ interface SidebarProps {
   onNewSession: () => void;
   onDeleteSession: (id: string) => void;
   onClearAll: () => void;
-  theme: ThemeMode;
-  onToggleTheme: () => void;
+  theme?: ThemeMode;
+  onToggleTheme?: () => void;
   isOpen: boolean;
   onCloseMobile: () => void;
   userProfile: UserProfile | null;
@@ -40,7 +43,9 @@ interface SidebarProps {
   personality: CompanionPersonality;
   onSavePersonality: (updated: CompanionPersonality) => void;
   onResetPersonality: () => void;
-  initialTab?: 'chats' | 'personality';
+  initialTab?: 'chats' | 'personality' | 'visualisation';
+  wallpaperSettings?: ChatWallpaperSettings;
+  onUpdateWallpaper?: (settings: ChatWallpaperSettings) => void;
 }
 
 export const Sidebar: FC<SidebarProps> = ({
@@ -61,8 +66,10 @@ export const Sidebar: FC<SidebarProps> = ({
   onSavePersonality,
   onResetPersonality,
   initialTab = 'chats',
+  wallpaperSettings,
+  onUpdateWallpaper,
 }) => {
-  const [menuTab, setMenuTab] = useState<'chats' | 'personality'>(initialTab);
+  const [menuTab, setMenuTab] = useState<'chats' | 'personality' | 'visualisation'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
 
@@ -95,41 +102,39 @@ export const Sidebar: FC<SidebarProps> = ({
     return titleMatch || messageMatch;
   });
 
-  const isKodewt =
+  const isMisiori =
     userProfile &&
-    (userProfile.username.toLowerCase() === 'kodewt' ||
-      userProfile.name.toLowerCase().includes('kodewt'));
+    (userProfile.username.toLowerCase() === 'misiori' ||
+      userProfile.username.toLowerCase() === 'kodewt' ||
+      userProfile.name.toLowerCase().includes('misiori'));
 
   const renderSidebarContent = () => (
     <div className="flex flex-col h-full select-none">
       {/* Brand Header */}
       <div className="p-4 pb-3 flex items-center justify-between border-b border-gray-200/60 dark:border-gray-800/60">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-gray-300 dark:ring-gray-700 shadow-xs bg-gray-100 dark:bg-gray-800">
-              <img
-                src={personality.avatarUrl}
-                alt={personality.name}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  e.currentTarget.src = DEFAULT_NIKILOW_AVATAR;
-                }}
-              />
-            </div>
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#f5f6f8] dark:ring-[#0e1117]" />
+          <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-gray-300 dark:ring-gray-700 shadow-xs bg-gray-100 dark:bg-gray-800">
+            <img
+              src={personality.avatarUrl}
+              alt={personality.name}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.src = DEFAULT_NIKILOW_AVATAR;
+              }}
+            />
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="font-semibold tracking-tight text-sm text-gray-900 dark:text-gray-100 truncate">
                 {personality.name}
               </span>
-              {isKodewt && personality.name.toLowerCase() === 'nikilow' && (
+              {isMisiori && (personality.name.toLowerCase() === 'niki' || personality.name.toLowerCase() === 'nikilow') && (
                 <VerifiedBadge size="sm" />
               )}
             </div>
             <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-              companion &bull; online
+              companion
             </span>
           </div>
         </div>
@@ -145,39 +150,58 @@ export const Sidebar: FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* Segmented Control Tabs: Conversations vs Personality */}
+      {/* Segmented Control Tabs: Conversations vs Personality vs Visualisation */}
       <div className="px-3 pt-3 pb-1">
-        <div className="flex items-center p-1 bg-gray-200/70 dark:bg-[#161a22] rounded-xl">
+        <div className="flex items-center p-1 bg-gray-200/70 dark:bg-[#161a22] rounded-xl gap-1">
           <button
             type="button"
             onClick={() => setMenuTab('chats')}
-            className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
               menuTab === 'chats'
                 ? 'bg-white dark:bg-[#202734] text-gray-900 dark:text-gray-100 shadow-xs font-semibold'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
             <MessageSquare size={13} />
-            <span>conversations</span>
+            <span className="truncate">chats</span>
           </button>
 
           <button
             type="button"
             onClick={() => setMenuTab('personality')}
-            className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
               menuTab === 'personality'
-                ? 'bg-white dark:bg-[#202734] text-[#007AFF] dark:text-[#3894ff] shadow-xs font-semibold'
+                ? 'bg-white dark:bg-[#202734] text-rose-500 shadow-xs font-semibold'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
             <Sparkles size={13} />
-            <span>personality</span>
+            <span className="truncate">persona</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMenuTab('visualisation')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+              menuTab === 'visualisation'
+                ? 'bg-white dark:bg-[#202734] text-rose-500 shadow-xs font-semibold'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            }`}
+          >
+            <Palette size={13} />
+            <span className="truncate">visual</span>
           </button>
         </div>
       </div>
 
-      {/* Tab Content: Personality Settings */}
-      {menuTab === 'personality' ? (
+      {/* Tab Content: Visualisation vs Personality vs Conversations */}
+      {menuTab === 'visualisation' && wallpaperSettings && onUpdateWallpaper ? (
+        <VisualisationSettings
+          wallpaperSettings={wallpaperSettings}
+          onUpdateWallpaper={onUpdateWallpaper}
+          onClose={onCloseMobile}
+        />
+      ) : menuTab === 'personality' ? (
         <PersonalitySettings
           personality={personality}
           onSave={onSavePersonality}
@@ -341,7 +365,7 @@ export const Sidebar: FC<SidebarProps> = ({
                 <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">
                   {userProfile.name}
                 </p>
-                {isKodewt && <VerifiedBadge size="sm" />}
+                {isMisiori && <VerifiedBadge size="sm" />}
               </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                 @{userProfile.username}
@@ -365,9 +389,9 @@ export const Sidebar: FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* Footer: theme toggle & clear history */}
-      <div className="p-3 pt-2 border-t border-gray-200/60 dark:border-gray-800/60 space-y-1">
-        {sessions.length > 0 && (
+      {/* Footer: clear history if sessions exist */}
+      {sessions.length > 0 && (
+        <div className="p-3 pt-2 border-t border-gray-200/60 dark:border-gray-800/60">
           <button
             onClick={onClearAll}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
@@ -375,21 +399,8 @@ export const Sidebar: FC<SidebarProps> = ({
             <Trash2 size={13} />
             <span>clear history</span>
           </button>
-        )}
-
-        <button
-          onClick={onToggleTheme}
-          className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200 transition-colors cursor-pointer"
-        >
-          <div className="flex items-center gap-2.5">
-            {theme === 'dark' ? <Moon size={13} /> : <Sun size={13} />}
-            <span>{theme === 'dark' ? 'dark' : 'light'}</span>
-          </div>
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-sm bg-gray-200/80 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-            {theme}
-          </span>
-        </button>
-      </div>
+        </div>
+      )}
         </>
       )}
     </div>

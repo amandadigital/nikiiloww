@@ -46,7 +46,7 @@ export const PostItem: FC<PostItemProps> = ({
           onClick={() => onViewProfile(post.authorUsername)}
           className="flex items-center gap-2.5 cursor-pointer group select-none"
         >
-          <div className="relative w-10 h-10 rounded-full overflow-hidden ring-1 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800 shrink-0 group-hover:ring-2 group-hover:ring-[#007AFF] transition-all">
+          <div className="relative w-10 h-10 rounded-full overflow-hidden ring-1 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800 shrink-0 group-hover:ring-2 group-hover:ring-pink-500 transition-all">
             {post.authorAvatar ? (
               <img
                 src={post.authorAvatar}
@@ -67,7 +67,7 @@ export const PostItem: FC<PostItemProps> = ({
 
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-[#007AFF] dark:group-hover:text-[#3897f0] transition-colors truncate">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-pink-500 dark:group-hover:text-pink-400 transition-colors truncate">
                 {post.authorName}
               </span>
               {isKodewt && <VerifiedBadge size="sm" />}

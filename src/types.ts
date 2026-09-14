@@ -40,13 +40,13 @@ export interface Post {
   isVerified?: boolean;
 }
 
-export type ActiveTab = 'feed' | 'chat' | 'profile';
+export type ActiveTab = 'feed' | 'search' | 'chat' | 'profile' | 'more';
 
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark';
 
-export const NIKILOW_AVATAR = 'https://i.pinimg.com/736x/77/35/36/773536c9815a6c1a5b06c0ff654f98c3.jpg';
+export const NIKILOW_AVATAR = 'https://i.pinimg.com/736x/a1/8f/50/a18f5016507bf9e3ea6bda97da769913.jpg';
 
-export const DEFAULT_NIKILOW_NAME = 'nikilow';
+export const DEFAULT_NIKILOW_NAME = 'niki';
 
 export const DEFAULT_NIKILOW_AVATAR = NIKILOW_AVATAR;
 

@@ -162,7 +162,7 @@ export const FeedView: FC<FeedViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto pb-24 bg-[#fbfbfa] dark:bg-[#0b0d11]">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto pb-24 md:pb-8 bg-[#fbfbfa] dark:bg-[#0b0d11]">
       {/* Apple-style sticky header */}
       <header className="sticky top-0 z-20 px-4 sm:px-6 py-2.5 bg-white/85 dark:bg-[#0e1117]/85 backdrop-blur-xl border-b border-gray-200/70 dark:border-gray-800/80 select-none">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
@@ -194,7 +194,7 @@ export const FeedView: FC<FeedViewProps> = ({
           >
             <RefreshCw
               size={15}
-              className={`${isRefreshing ? 'animate-spin text-[#007AFF]' : ''}`}
+              className={`${isRefreshing ? 'animate-spin text-pink-500' : ''}`}
             />
           </button>
         </div>
@@ -250,7 +250,7 @@ export const FeedView: FC<FeedViewProps> = ({
                       <User size={11} className="text-gray-500" />
                     )}
                   </div>
-                  <span className="text-gray-800 dark:text-gray-200 group-hover:text-[#007AFF] transition-colors">
+                  <span className="text-gray-800 dark:text-gray-200 group-hover:text-pink-500 transition-colors">
                     @{u.username}
                   </span>
                   {u.isVerified && <VerifiedBadge size="sm" />}
@@ -328,7 +328,7 @@ export const FeedView: FC<FeedViewProps> = ({
                     type="submit"
                     disabled={!content.trim() || isSubmitting || isOverLimit || isRateLimited}
                     title={isRateLimited ? `You can post updates once every 5 minutes. Try again in ${formattedRemaining}.` : 'Post update'}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#007AFF] hover:bg-[#0066d6] text-white text-xs font-medium transition-all shadow-xs disabled:opacity-35 disabled:pointer-events-none active:scale-95 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-medium transition-all shadow-xs disabled:opacity-35 disabled:pointer-events-none active:scale-95 cursor-pointer"
                   >
                     <span>{isSubmitting ? 'posting...' : isRateLimited ? `cooldown (${formattedRemaining})` : 'post'}</span>
                     <Send size={12} />
@@ -350,7 +350,7 @@ export const FeedView: FC<FeedViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenAuth}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#007AFF] hover:bg-[#0066d6] text-white text-xs font-medium transition-all shadow-xs shrink-0 cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-medium transition-all shadow-xs shrink-0 cursor-pointer"
               >
                 <LogIn size={13} />
                 <span>sign in</span>

@@ -1,6 +1,6 @@
 {
-  "name": "Remix nikilow",
-  "description": "a personal, melancholic, and thoughtful ai companion with real-time chat, session history, and dark/light themes",
+  "name": "naisuru (startorigin.me)",
+  "description": "create whoever you want with a prompt. customizable ai companion & social universe by @misiori",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

@@ -850,25 +850,53 @@ export async function fetchFeedPosts(currentUserId?: string): Promise<Post[]> {
   // 2. Fallback to direct client if API returned empty / failed
   if (dbPostsList.length === 0) {
     try {
-      const { data: dbPosts, error } = await supabase
+      let dbPosts: any[] | null = null;
+      const { data: joinedPosts, error: joinErr } = await supabase
         .from('posts')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            name,
+            username,
+            avatar_url,
+            is_verified
+          )
+        `)
         .order('created_at', { ascending: false });
 
-      if (!error && dbPosts && dbPosts.length > 0) {
+      if (!joinErr && joinedPosts) {
+        dbPosts = joinedPosts;
+      } else {
+        const { data: simplePosts } = await supabase
+          .from('posts')
+          .select('*')
+          .order('created_at', { ascending: false });
+        dbPosts = simplePosts;
+      }
+
+      if (dbPosts && dbPosts.length > 0) {
         dbPostsList = dbPosts.map((p) => {
-          const isKodewt = p.author_username?.toLowerCase() === 'kodewt';
+          const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
+          const authorUsername = profile?.username || p.author_username;
+          const authorName = profile?.name || profile?.username || p.author_name || authorUsername;
+          const authorAvatar = profile?.avatar_url || p.author_avatar || '';
+          const isKodewt =
+            authorUsername?.toLowerCase() === 'kodewt' ||
+            authorUsername?.toLowerCase() === '@kodewt';
+          const isVerified = Boolean(profile?.is_verified ?? p.is_verified) || isKodewt;
+
           return {
             id: p.id,
             userId: p.user_id,
-            authorName: p.author_name || p.author_username,
-            authorUsername: p.author_username,
-            authorAvatar: p.author_avatar || '',
+            authorName,
+            authorUsername,
+            authorAvatar,
             content: p.content,
             createdAt: new Date(p.created_at).getTime(),
             likesCount: p.likes_count || 0,
             isLiked: userLikes.includes(p.id),
-            isVerified: isKodewt || p.is_verified,
+            isVerified,
           };
         });
       }

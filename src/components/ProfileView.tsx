@@ -29,7 +29,6 @@ interface ProfileViewProps {
   onLikePost: (postId: string) => void;
   onDeletePost?: (postId: string) => Promise<void> | void;
   onViewProfile: (username: string) => void;
-  onStartChatWithNikilow?: () => void;
   onOpenMenu?: () => void;
 }
 
@@ -45,7 +44,6 @@ export const ProfileView: FC<ProfileViewProps> = ({
   onLikePost,
   onDeletePost,
   onViewProfile,
-  onStartChatWithNikilow,
   onOpenMenu,
 }) => {
   const [newPostContent, setNewPostContent] = useState('');
@@ -57,14 +55,21 @@ export const ProfileView: FC<ProfileViewProps> = ({
   const isOwnProfile =
     currentUser && profile && currentUser.username.toLowerCase() === profile.username.toLowerCase();
 
-  const isKodewt =
-    profile?.username.toLowerCase() === 'kodewt' || profile?.is_verified;
+  const isMisiori =
+    Boolean(
+      profile?.username.toLowerCase() === 'misiori' ||
+      profile?.username.toLowerCase() === 'kodewt'
+    );
 
-  // Posts authored by this profile
+  const isVerified = isMisiori || Boolean(profile?.is_verified);
+
+  // Posts authored by this profile (matched by userId if present or username)
   const userPosts = useMemo(() => {
     if (!profile) return [];
     return posts.filter(
-      (p) => p.authorUsername.toLowerCase() === profile.username.toLowerCase()
+      (p) =>
+        (p.userId && profile.id && p.userId === profile.id) ||
+        p.authorUsername.toLowerCase() === profile.username.toLowerCase()
     );
   }, [posts, profile]);
 
@@ -116,7 +121,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#fbfbfa] dark:bg-[#0b0d11] pb-24 select-none">
         <div className="max-w-sm w-full p-6 bg-white dark:bg-[#151922] border border-gray-200/80 dark:border-gray-800/80 rounded-3xl shadow-xs">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#007AFF] flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-pink-50 dark:bg-pink-950/40 text-pink-500 flex items-center justify-center">
             <Sparkles size={28} />
           </div>
 
@@ -129,7 +134,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
 
           <button
             onClick={onOpenAuth}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-[#007AFF] hover:bg-[#0066d6] text-white text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
           >
             <LogIn size={15} />
             <span>sign in</span>
@@ -140,14 +145,14 @@ export const ProfileView: FC<ProfileViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto pb-24 bg-[#fbfbfa] dark:bg-[#0b0d11]">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto pb-24 md:pb-8 bg-[#fbfbfa] dark:bg-[#0b0d11]">
       {/* Apple-style Navigation Header */}
       <header className="sticky top-0 z-20 h-14 flex items-center justify-between px-4 sm:px-6 bg-white/80 dark:bg-[#0e1117]/80 backdrop-blur-xl border-b border-gray-200/70 dark:border-gray-800/80 select-none">
         <div className="flex items-center gap-2">
           {onBack ? (
             <button
               onClick={onBack}
-              className="flex items-center gap-1 -ml-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-[#007AFF] hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer"
+              className="flex items-center gap-1 -ml-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-950/40 transition-colors cursor-pointer"
               aria-label="go back"
             >
               <ArrowLeft size={16} />
@@ -192,16 +197,6 @@ export const ProfileView: FC<ProfileViewProps> = ({
               </button>
             </>
           )}
-
-          {!isOwnProfile && onStartChatWithNikilow && (
-            <button
-              onClick={onStartChatWithNikilow}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#007AFF] hover:bg-[#0066d6] text-white text-xs font-medium transition-colors shadow-2xs cursor-pointer"
-            >
-              <MessageSquare size={13} />
-              <span>chat</span>
-            </button>
-          )}
         </div>
       </header>
 
@@ -226,16 +221,6 @@ export const ProfileView: FC<ProfileViewProps> = ({
                   </div>
                 )}
               </div>
-
-              {/* Blue verified badge for @kodewt */}
-              {isKodewt && (
-                <div
-                  className="absolute bottom-0 right-0 transform translate-x-1 translate-y-1"
-                  title="verified"
-                >
-                  <VerifiedBadge size="lg" />
-                </div>
-              )}
             </div>
 
             {/* User Meta */}
@@ -244,10 +229,10 @@ export const ProfileView: FC<ProfileViewProps> = ({
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
                   {profile.name}
                 </h2>
-                {isKodewt && <VerifiedBadge size="md" />}
+                {isVerified && <VerifiedBadge size="md" />}
               </div>
 
-              <p className="text-xs font-medium text-[#007AFF] dark:text-[#3897f0] mt-0.5">
+              <p className="text-xs font-medium text-rose-500 dark:text-rose-400 mt-0.5">
                 @{profile.username}
               </p>
 
@@ -256,11 +241,13 @@ export const ProfileView: FC<ProfileViewProps> = ({
                 {profile.bio || 'no bio yet.'}
               </p>
 
-              {/* Verified highlight */}
-              {isKodewt && (
-                <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-[#007AFF] dark:text-sky-400 font-medium">
-                  <ShieldCheck size={13} />
-                  <span>verified</span>
+              {/* Status badges */}
+              {isVerified && (
+                <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-pink-50 dark:bg-pink-950/40 border border-pink-200/60 dark:border-pink-900/40 text-[11px] text-pink-500 dark:text-pink-400 font-medium">
+                    <ShieldCheck size={13} />
+                    <span>verified</span>
+                  </div>
                 </div>
               )}
 
@@ -334,7 +321,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
                   type="submit"
                   disabled={!newPostContent.trim() || isSubmittingPost || isRateLimited}
                   title={isRateLimited ? `Posting updates is limited to once every 5 minutes. Try again in ${formattedRemaining}.` : 'Post update'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#007AFF] hover:bg-[#0066d6] text-white text-xs font-medium shadow-xs disabled:opacity-35 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-medium shadow-xs disabled:opacity-35 cursor-pointer"
                 >
                   <span>{isSubmittingPost ? 'posting...' : isRateLimited ? `cooldown (${formattedRemaining})` : 'post'}</span>
                   <Send size={11} />

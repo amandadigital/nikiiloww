@@ -74,20 +74,12 @@ export function clearSavedSessions(): void {
 }
 
 export function loadSavedTheme(): ThemeMode {
-  try {
-    const saved = localStorage.getItem(STORAGE_THEME_KEY);
-    if (saved === 'dark' || saved === 'light') {
-      return saved;
-    }
-  } catch {
-    // ignore
-  }
-  return 'dark'; // default to moody aesthetic dark theme
+  return 'dark'; // night mode only
 }
 
-export function saveTheme(theme: ThemeMode): void {
+export function saveTheme(_theme?: ThemeMode): void {
   try {
-    localStorage.setItem(STORAGE_THEME_KEY, theme);
+    localStorage.setItem(STORAGE_THEME_KEY, 'dark');
   } catch {
     // ignore
   }
@@ -115,10 +107,20 @@ export function loadCompanionPersonality(): CompanionPersonality {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed.name === 'string') {
+        let name = parsed.name.trim();
+        let avatarUrl = parsed.avatarUrl;
+        // Migrate legacy nikilow default to niki and update old default avatar
+        if (!name || name.toLowerCase() === 'nikilow') {
+          name = DEFAULT_NIKILOW_NAME;
+        }
+        if (!avatarUrl || avatarUrl === 'https://i.pinimg.com/736x/77/35/36/773536c9815a6c1a5b06c0ff654f98c3.jpg') {
+          avatarUrl = DEFAULT_NIKILOW_AVATAR;
+        }
+
         return {
-          name: parsed.name.trim() || DEFAULT_NIKILOW_NAME,
+          name,
           prompt: typeof parsed.prompt === 'string' && parsed.prompt.trim() ? parsed.prompt : DEFAULT_NIKILOW_PROMPT,
-          avatarUrl: parsed.avatarUrl || DEFAULT_NIKILOW_AVATAR,
+          avatarUrl,
         };
       }
     }

@@ -183,12 +183,6 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                 >
                   <Camera size={14} />
                 </button>
-
-                {isKodewt && (
-                  <div className="absolute top-0 right-0">
-                    <VerifiedBadge size="md" />
-                  </div>
-                )}
               </div>
 
               <input
@@ -202,7 +196,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-xs text-[#007AFF] hover:underline font-medium cursor-pointer"
+                className="text-xs text-pink-500 hover:underline font-medium cursor-pointer"
               >
                 change photo
               </button>
@@ -227,7 +221,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                 placeholder="your name"
                 maxLength={40}
                 required
-                className="w-full px-3.5 py-2 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-[#007AFF]"
+                className="w-full px-3.5 py-2 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-pink-500"
               />
             </div>
 
@@ -238,7 +232,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                   username
                 </label>
                 {isKodewt && (
-                  <span className="flex items-center gap-1 text-[11px] text-[#007AFF] font-medium">
+                  <span className="flex items-center gap-1 text-[11px] text-pink-500 font-medium">
                     <VerifiedBadge size="sm" />
                     <span>verified badge active</span>
                   </span>
@@ -253,7 +247,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                   placeholder="username"
                   maxLength={30}
                   required
-                  className="w-full pl-7 pr-3.5 py-2 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-[#007AFF]"
+                  className="w-full pl-7 pr-3.5 py-2 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-pink-500"
                 />
               </div>
             </div>
@@ -269,7 +263,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="bio..."
                 maxLength={200}
-                className="w-full px-3.5 py-2 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-[#007AFF] resize-none"
+                className="w-full px-3.5 py-2 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-pink-500 resize-none"
               />
               <span className="text-[10px] text-gray-400 dark:text-gray-500 float-right mt-0.5 font-mono">
                 {200 - bio.length}
@@ -288,7 +282,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#007AFF] hover:bg-[#0066d6] text-white text-xs font-medium shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-medium shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
               >
                 {success ? (
                   <>

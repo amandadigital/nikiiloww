@@ -4,13 +4,18 @@
 
 @layer base {
   :root {
-    --bg-primary: #f8f9fa;
+    --bg-primary: #fbfbfa;
     --bg-secondary: #f0f2f5;
     --bg-surface: #ffffff;
     --border-color: #e5e7eb;
     --text-primary: #1f242e;
     --text-muted: #6b7280;
-    --accent: #4f5b66;
+    --accent: #f43f5e;
+    --accent-hover: #e11d48;
+    --accent-subtle: rgba(244, 63, 94, 0.12);
+    --accent-ring: rgba(244, 63, 94, 0.25);
+    --user-msg-bg: #f43f5e;
+    --companion-msg-bg: #ffffff;
   }
 
   .dark {
@@ -20,7 +25,116 @@
     --border-color: #262c38;
     --text-primary: #e6e8ec;
     --text-muted: #8b92a2;
-    --accent: #9aa5b5;
+    --accent: #f43f5e;
+    --accent-hover: #fb7185;
+    --accent-subtle: rgba(244, 63, 94, 0.18);
+    --accent-ring: rgba(244, 63, 94, 0.35);
+    --user-msg-bg: #f43f5e;
+    --companion-msg-bg: #181c24;
+  }
+
+  /* Accent Color Variants */
+  [data-accent="rose"] {
+    --accent: #f43f5e;
+    --accent-hover: #e11d48;
+    --accent-subtle: rgba(244, 63, 94, 0.15);
+    --accent-ring: rgba(244, 63, 94, 0.3);
+    --user-msg-bg: #f43f5e;
+  }
+  [data-accent="pink"],
+  [data-accent="blue"] {
+    --accent: #ec4899;
+    --accent-hover: #db2777;
+    --accent-subtle: rgba(236, 72, 153, 0.15);
+    --accent-ring: rgba(236, 72, 153, 0.3);
+    --user-msg-bg: #ec4899;
+  }
+  [data-accent="purple"] {
+    --accent: #a855f7;
+    --accent-hover: #9333ea;
+    --accent-subtle: rgba(168, 85, 247, 0.15);
+    --accent-ring: rgba(168, 85, 247, 0.3);
+    --user-msg-bg: #a855f7;
+  }
+  [data-accent="green"] {
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --accent-subtle: rgba(16, 185, 129, 0.15);
+    --accent-ring: rgba(16, 185, 129, 0.3);
+    --user-msg-bg: #10b981;
+  }
+
+  /* Background Themes (Light Mode) */
+  :root[data-bg-theme="default"]:not(.dark) {
+    --bg-primary: #fbfbfa;
+    --bg-secondary: #f0f2f5;
+    --bg-surface: #ffffff;
+    --border-color: #e5e7eb;
+    --text-primary: #1f242e;
+    --companion-msg-bg: #ffffff;
+  }
+  :root[data-bg-theme="midnight"]:not(.dark) {
+    --bg-primary: #f0f4fc;
+    --bg-secondary: #e2eaf8;
+    --bg-surface: #ffffff;
+    --border-color: #c7d5ea;
+    --text-primary: #0f172a;
+    --companion-msg-bg: #ffffff;
+  }
+  :root[data-bg-theme="charcoal"]:not(.dark) {
+    --bg-primary: #f4f4f5;
+    --bg-secondary: #e4e4e7;
+    --bg-surface: #ffffff;
+    --border-color: #d4d4d8;
+    --text-primary: #18181b;
+    --companion-msg-bg: #ffffff;
+  }
+  :root[data-bg-theme="velvet"]:not(.dark) {
+    --bg-primary: #fff1f5;
+    --bg-secondary: #ffe4e6;
+    --bg-surface: #ffffff;
+    --border-color: #fecdd3;
+    --text-primary: #831843;
+    --companion-msg-bg: #ffffff;
+  }
+
+  /* Background Themes (Dark Mode) */
+  .dark[data-bg-theme="default"],
+  .dark:not([data-bg-theme]) {
+    --bg-primary: #0b0d11;
+    --bg-secondary: #13161c;
+    --bg-surface: #181c24;
+    --border-color: #262c38;
+    --text-primary: #e6e8ec;
+    --text-muted: #8b92a2;
+    --companion-msg-bg: #181c24;
+  }
+  .dark[data-bg-theme="midnight"] {
+    --bg-primary: #060913;
+    --bg-secondary: #0c1222;
+    --bg-surface: #12182c;
+    --border-color: #1e2642;
+    --text-primary: #e2e8f0;
+    --text-muted: #818cf8;
+    --companion-msg-bg: #12182c;
+  }
+  .dark[data-bg-theme="charcoal"] {
+    --bg-primary: #101114;
+    --bg-secondary: #16181d;
+    --bg-surface: #1c1e24;
+    --border-color: #272a33;
+    --text-primary: #f4f4f5;
+    --text-muted: #a1a1aa;
+    --companion-msg-bg: #1c1e24;
+  }
+  .dark[data-bg-theme="velvet"] {
+    --bg-primary: #12080f;
+    --bg-secondary: #1a0f16;
+    --bg-surface: #22151e;
+    --border-color: #381c30;
+    --text-primary: #fce7f3;
+    --text-muted: #f472b6;
+    --companion-msg-bg: #22151e;
   }
 
   * {
@@ -34,7 +148,58 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
+}
+
+/* Theme Utilities */
+.app-theme-bg {
+  background-color: var(--bg-primary) !important;
+}
+.app-theme-surface {
+  background-color: var(--bg-surface) !important;
+}
+.app-theme-border {
+  border-color: var(--border-color) !important;
+}
+.app-theme-text {
+  color: var(--text-primary) !important;
+}
+
+/* Chat Message Bubble styling */
+.chat-bubble-user {
+  background-color: var(--accent) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px -3px var(--accent-subtle, rgba(0, 0, 0, 0.2));
+}
+
+.chat-bubble-companion {
+  background-color: var(--companion-msg-bg) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Interactive Hover Jump Micro-Interactions */
+.hover-jump {
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, filter 0.2s ease;
+  will-change: transform;
+}
+.hover-jump:hover {
+  transform: translateY(-3px);
+}
+.hover-jump:active {
+  transform: translateY(0px) scale(0.97);
+}
+
+.hover-jump-sm {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  will-change: transform;
+}
+.hover-jump-sm:hover {
+  transform: translateY(-2px);
+}
+.hover-jump-sm:active {
+  transform: translateY(0px) scale(0.98);
 }
 
 /* sleek custom scrollbar */

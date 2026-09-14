@@ -1,13 +1,21 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { FeedView } from './components/FeedView';
+import { SearchView } from './components/SearchView';
 import { ProfileView } from './components/ProfileView';
+import { MoreView } from './components/MoreView';
 import { AppleNavBar } from './components/AppleNavBar';
+import { DesktopNav } from './components/DesktopNav';
 import { EditProfileModal } from './components/EditProfileModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { AuthModal } from './components/AuthModal';
 import { AdminPanel } from './components/AdminPanel';
+import { IntroAnimation } from './components/IntroAnimation';
+import { VisualisationModal } from './components/VisualisationModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { PanelLeftOpen } from 'lucide-react';
 import {
   ActiveTab,
   ChatSession,
@@ -36,6 +44,20 @@ import {
   recordPostTimestamp,
 } from './utils/rateLimit';
 import {
+  getSavedAccentColor,
+  saveAccentColor,
+  getSavedBgTheme,
+  saveBgTheme,
+  applySavedThemePreferences,
+  AccentColor,
+  BgTheme,
+} from './utils/theme';
+import {
+  loadWallpaperSettings,
+  saveWallpaperSettings,
+  ChatWallpaperSettings,
+} from './utils/wallpaper';
+import {
   supabase,
   fetchUserProfile,
   syncChatToSupabase,
@@ -50,8 +72,55 @@ import {
 } from './lib/supabase';
 
 export default function App() {
-  // Navigation active tab: 'feed' | 'chat' | 'profile'
+  // Navigation active tab: 'feed' | 'search' | 'chat' | 'profile' | 'more'
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
+
+  // Welcome Intro Animation state (plays on entering the website)
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(() => false);
+
+  // Accent & Background color themes (default: rose)
+  // Accent color, theme & wallpaper state
+  const [theme, setTheme] = useState<ThemeMode>(() => loadSavedTheme());
+  const [accentColor, setAccentColor] = useState<AccentColor>(() => getSavedAccentColor());
+  const [bgTheme, setBgTheme] = useState<BgTheme>(() => getSavedBgTheme());
+
+  // Chat Wallpaper settings & Modal state
+  const [wallpaperSettings, setWallpaperSettings] = useState<ChatWallpaperSettings>(() =>
+    loadWallpaperSettings()
+  );
+  const [isVisualisationOpen, setIsVisualisationOpen] = useState<boolean>(false);
+
+  // Initialize and synchronize saved theme preferences
+  useEffect(() => {
+    applySavedThemePreferences();
+  }, [theme, accentColor, bgTheme]);
+
+  // Apply theme class to document
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    saveTheme(theme);
+  }, [theme]);
+
+  const handleAccentChange = useCallback((col: AccentColor) => {
+    setAccentColor(col);
+    saveAccentColor(col);
+    applySavedThemePreferences();
+  }, []);
+
+  const handleBgThemeChange = useCallback((themeName: BgTheme) => {
+    setBgTheme(themeName);
+    saveBgTheme(themeName);
+    applySavedThemePreferences();
+  }, []);
+
+  const handleWallpaperUpdate = useCallback((newSettings: ChatWallpaperSettings) => {
+    setWallpaperSettings(newSettings);
+    saveWallpaperSettings(newSettings);
+  }, []);
 
   // URL route path tracking (supports direct /admin navigation)
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname);
@@ -74,21 +143,30 @@ export default function App() {
   // Viewing a specific profile (when clicking a mention or user avatar)
   const [viewedProfile, setViewedProfile] = useState<UserProfile | null>(null);
 
-  // Theme state
-  const [theme, setTheme] = useState<ThemeMode>(() => loadSavedTheme());
-
-  // Apply theme class to document
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+  // Desktop side navigation menu visibility state (can be hidden or shown at any moment)
+  const [isDesktopNavOpen, setIsDesktopNavOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('naisuru_desktop_nav_open') !== 'false';
+    } catch {
+      return true;
     }
-    saveTheme(theme);
-  }, [theme]);
+  });
+
+  const toggleDesktopNav = useCallback(() => {
+    setIsDesktopNavOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('naisuru_desktop_nav_open', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    // Night mode is permanent
+    setTheme('dark');
   };
 
   // User Profile & Authentication state
@@ -368,25 +446,25 @@ export default function App() {
     const clean = username.trim().toLowerCase().replace(/^@/, '');
 
     // Companion profile view is disabled as personality is dynamic and customizable
-    if (clean === 'nikilow' || clean === personality.name.toLowerCase()) {
+    if (clean === 'niki' || clean === 'nikilow' || clean === personality.name.toLowerCase()) {
       return;
     }
 
-    // If it's @kodewt
-    if (clean === 'kodewt') {
-      if (userProfile?.username.toLowerCase() === 'kodewt') {
+    // If it's @misiori or @kodewt (creator & boyfriend)
+    if (clean === 'misiori' || clean === 'kodewt') {
+      if (userProfile?.username.toLowerCase() === 'misiori' || userProfile?.username.toLowerCase() === 'kodewt') {
         setViewedProfile(userProfile);
       } else {
-        const found = await fetchProfileByUsername('kodewt');
+        const found = await fetchProfileByUsername(clean);
         setViewedProfile(
           found || {
-            id: 'kodewt_creator',
-            name: 'kodewt',
-            username: 'kodewt',
-            email: 'kodewt@creator.dev',
+            id: 'misiori_creator',
+            name: 'misiori',
+            username: 'misiori',
+            email: 'misiori@naisuru.app',
             avatar_url:
-              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-            bio: 'software architect and designer.',
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+            bio: "creator of naisuru • building whatever u want with a prompt",
             is_verified: true,
             created_at: new Date(Date.now() - 86400000 * 60).toISOString(),
             updated_at: new Date().toISOString(),
@@ -419,7 +497,7 @@ export default function App() {
         username: clean,
         email: `${clean}@community.local`,
         avatar_url: matchingPost?.authorAvatar || '',
-        bio: `member of the nikilow community.`,
+        bio: `member of the naisuru community.`,
         is_verified: clean === 'kodewt',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -539,13 +617,13 @@ export default function App() {
       setViewedProfile(updated);
     }
 
-    // Also update any posts authored by this user
+    // Also update any posts authored by this user by ID so username change cascades instantly
     setPosts((prev) =>
       prev.map((p) => {
-        if (p.userId === updated.id || p.authorUsername === updated.username) {
+        if (p.userId === updated.id) {
           return {
             ...p,
-            authorName: updated.name,
+            authorName: updated.name || updated.username,
             authorUsername: updated.username,
             authorAvatar: updated.avatar_url,
             isVerified: updated.username === 'kodewt' || updated.is_verified,
@@ -879,7 +957,34 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#fbfbfa] dark:bg-[#0b0d11] text-gray-900 dark:text-gray-100 font-sans selection:bg-gray-300 dark:selection:bg-gray-700 relative">
+    <div
+      className="flex h-screen w-screen overflow-hidden text-gray-900 dark:text-gray-100 font-sans selection:bg-pink-500/30 relative transition-colors duration-300"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
+      {/* Side navigation menu on computers (toggleable sections sidebar) */}
+      <DesktopNav
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        userProfile={userProfile}
+        accentColor={accentColor}
+        personality={personality}
+        isOpen={isDesktopNavOpen}
+        onToggle={toggleDesktopNav}
+      />
+
+      {/* Floating button to restore side navigation on computers when hidden */}
+      {!isDesktopNavOpen && (
+        <button
+          type="button"
+          onClick={toggleDesktopNav}
+          className="fixed top-1/2 -translate-y-1/2 left-0 z-40 hidden md:flex items-center justify-center p-2.5 rounded-r-xl bg-[#0d1017]/90 hover:bg-[#151924] backdrop-blur-md border border-l-0 border-gray-800/90 text-gray-300 hover:text-white hover:border-pink-500/40 shadow-lg transition-all hover-jump-sm cursor-pointer"
+          title="show sections"
+          aria-label="Show navigation sections"
+        >
+          <PanelLeftOpen size={16} className="text-pink-400" />
+        </button>
+      )}
+
       {/* Slide-in menu & chat history drawer */}
       <Sidebar
         sessions={sessions}
@@ -888,8 +993,6 @@ export default function App() {
         onNewSession={handleNewSession}
         onDeleteSession={handleDeleteSession}
         onClearAll={handleOpenClearModal}
-        theme={theme}
-        onToggleTheme={toggleTheme}
         isOpen={isSidebarOpen}
         onCloseMobile={handleCloseSidebar}
         userProfile={userProfile}
@@ -901,69 +1004,121 @@ export default function App() {
         personality={personality}
         onSavePersonality={handleSavePersonality}
         onResetPersonality={handleResetPersonality}
+        wallpaperSettings={wallpaperSettings}
+        onUpdateWallpaper={handleWallpaperUpdate}
       />
 
       {/* Main Content Area switched by Apple Nav Bar */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {activeTab === 'feed' && (
-          <FeedView
-            posts={posts}
-            userProfile={userProfile}
-            onAddPost={handleAddPost}
-            onLikePost={handleLikePost}
-            onDeletePost={handleDeletePost}
-            onViewProfile={handleViewProfile}
-            onOpenAuth={() => setIsAuthModalOpen(true)}
-            onRefreshFeed={refreshPosts}
-            isRefreshing={isRefreshingFeed}
-            onOpenMenu={handleOpenMenu}
-          />
-        )}
+      <main
+        className="flex-1 flex flex-col h-full overflow-hidden relative"
+        style={{ backgroundColor: 'var(--bg-primary)' }}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeTab + (activeTab === 'profile' && viewedProfile ? `_${viewedProfile.username}` : '')}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.16, ease: [0.25, 1, 0.5, 1] }}
+            className="flex-1 flex flex-col h-full overflow-hidden relative"
+          >
+            {activeTab === 'feed' && (
+              <FeedView
+                posts={posts}
+                userProfile={userProfile}
+                onAddPost={handleAddPost}
+                onLikePost={handleLikePost}
+                onDeletePost={handleDeletePost}
+                onViewProfile={handleViewProfile}
+                onOpenAuth={() => setIsAuthModalOpen(true)}
+                onRefreshFeed={refreshPosts}
+                isRefreshing={isRefreshingFeed}
+                onOpenMenu={handleOpenMenu}
+              />
+            )}
 
-        {activeTab === 'chat' && (
-          <ChatArea
-            messages={activeSession.messages}
-            isStreaming={isStreaming}
-            onSendMessage={handleSendMessage}
-            onStopStreaming={handleStopStreaming}
-            onOpenMenu={handleOpenMenu}
-            onNewChat={handleNewSession}
-            userProfile={userProfile}
-            onOpenProfile={() => setActiveTab('profile')}
-            onOpenAuth={() => setIsAuthModalOpen(true)}
-            personality={personality}
-            onMentionClick={handleViewProfile}
-          />
-        )}
+            {activeTab === 'search' && (
+              <SearchView
+                onOpenUserProfile={handleViewProfile}
+                onOpenChatWithCompanion={() => setActiveTab('chat')}
+                posts={posts}
+                currentUserProfile={userProfile}
+              />
+            )}
 
-        {activeTab === 'profile' && (
-          <ProfileView
-            currentUser={userProfile}
-            viewedUser={viewedProfile}
-            posts={posts}
-            onBack={viewedProfile ? handleBackFromProfile : undefined}
-            onEditProfile={() => setIsEditProfileOpen(true)}
-            onSignOut={handleSignOut}
-            onOpenAuth={() => setIsAuthModalOpen(true)}
-            onAddPost={handleAddPost}
-            onLikePost={handleLikePost}
-            onDeletePost={handleDeletePost}
-            onViewProfile={handleViewProfile}
-            onStartChatWithNikilow={() => {
-              setViewedProfile(null);
-              setActiveTab('chat');
-            }}
-            onOpenMenu={handleOpenMenu}
-          />
-        )}
+            {activeTab === 'chat' && (
+              <ChatArea
+                messages={activeSession.messages}
+                isStreaming={isStreaming}
+                onSendMessage={handleSendMessage}
+                onStopStreaming={handleStopStreaming}
+                onOpenMenu={handleOpenMenu}
+                onNewChat={handleNewSession}
+                userProfile={userProfile}
+                onOpenProfile={() => setActiveTab('profile')}
+                onOpenAuth={() => setIsAuthModalOpen(true)}
+                personality={personality}
+                onMentionClick={handleViewProfile}
+                wallpaperSettings={wallpaperSettings}
+                onOpenVisualisation={() => setIsVisualisationOpen(true)}
+                accentColor={accentColor}
+              />
+            )}
+
+            {activeTab === 'profile' && (
+              <ProfileView
+                currentUser={userProfile}
+                viewedUser={viewedProfile}
+                posts={posts}
+                onBack={viewedProfile ? handleBackFromProfile : undefined}
+                onEditProfile={() => setIsEditProfileOpen(true)}
+                onSignOut={handleSignOut}
+                onOpenAuth={() => setIsAuthModalOpen(true)}
+                onAddPost={handleAddPost}
+                onLikePost={handleLikePost}
+                onDeletePost={handleDeletePost}
+                onViewProfile={handleViewProfile}
+                onOpenMenu={handleOpenMenu}
+              />
+            )}
+
+            {activeTab === 'more' && (
+              <MoreView
+                accentColor={accentColor}
+                onSelectAccentColor={handleAccentChange}
+                bgTheme={bgTheme}
+                onSelectBgTheme={handleBgThemeChange}
+                onOpenUserProfile={handleViewProfile}
+                onReplayIntro={() => setHasSeenIntro(false)}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
 
         {/* Apple-style Bottom Navigation Bar (Both Desktop & Mobile) */}
         <AppleNavBar
           activeTab={activeTab}
           onTabChange={handleTabChange}
           userProfile={userProfile}
+          accentColor={accentColor}
         />
       </main>
+
+      {/* Visualisation / Chat Wallpaper Modal */}
+      <VisualisationModal
+        isOpen={isVisualisationOpen}
+        onClose={() => setIsVisualisationOpen(false)}
+        wallpaperSettings={wallpaperSettings}
+        onUpdateWallpaper={handleWallpaperUpdate}
+      />
+
+      {/* Offline Status Toast Indicator */}
+      <OfflineIndicator />
+
+      {/* Welcome Animated Intro (Welcome to naisuru -> small circle -> app emerges) */}
+      {!hasSeenIntro && (
+        <IntroAnimation onComplete={() => setHasSeenIntro(true)} />
+      )}
 
       {/* Edit Profile Modal */}
       {userProfile && (

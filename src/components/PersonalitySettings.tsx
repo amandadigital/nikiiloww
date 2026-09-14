@@ -1,4 +1,4 @@
-import { FC, useState, useRef, ChangeEvent, FormEvent } from 'react';
+import { FC, useState, useRef, ChangeEvent, FormEvent, useEffect } from 'react';
 import {
   Sparkles,
   RotateCcw,
@@ -26,7 +26,7 @@ interface PersonalitySettingsProps {
 
 const PRESET_AVATARS = [
   {
-    name: 'nikilow (default)',
+    name: 'niki (default)',
     url: DEFAULT_NIKILOW_AVATAR,
   },
   {
@@ -59,10 +59,45 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Sync state if external personality changes
+  useEffect(() => {
+    setName(personality.name);
+    setPrompt(personality.prompt);
+    setAvatarUrl(personality.avatarUrl);
+  }, [personality.name, personality.prompt, personality.avatarUrl]);
+
   const isDefaultNikilow =
-    name.trim().toLowerCase() === DEFAULT_NIKILOW_NAME &&
+    name.trim().toLowerCase() === DEFAULT_NIKILOW_NAME.toLowerCase() &&
     avatarUrl === DEFAULT_NIKILOW_AVATAR &&
     prompt.trim() === DEFAULT_NIKILOW_PROMPT.trim();
+
+  // Helper to immediately push changes visually to parent and global state
+  const notifyLiveChange = (
+    updatedName: string,
+    updatedPrompt: string,
+    updatedAvatar: string
+  ) => {
+    onSave({
+      name: updatedName.trim() || DEFAULT_NIKILOW_NAME,
+      prompt: updatedPrompt.trim() || DEFAULT_NIKILOW_PROMPT,
+      avatarUrl: updatedAvatar.trim() || DEFAULT_NIKILOW_AVATAR,
+    });
+  };
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    notifyLiveChange(val, prompt, avatarUrl);
+  };
+
+  const handlePromptChange = (val: string) => {
+    setPrompt(val);
+    notifyLiveChange(name, val, avatarUrl);
+  };
+
+  const handleAvatarChange = (newUrl: string) => {
+    setAvatarUrl(newUrl);
+    notifyLiveChange(name, prompt, newUrl);
+  };
 
   // Compress and handle image file upload
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -103,8 +138,8 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
           const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          setAvatarUrl(compressedDataUrl);
-          setFeedback('image uploaded');
+          handleAvatarChange(compressedDataUrl);
+          setFeedback('image updated immediately');
           setTimeout(() => setFeedback(null), 2500);
         }
         setIsUploading(false);
@@ -124,13 +159,14 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
     reader.readAsDataURL(file);
   };
 
-  // Roll back to Nikilow's original prompt and identity
+  // Roll back to Niki's original prompt and identity
   const handleRollback = () => {
     setName(DEFAULT_NIKILOW_NAME);
     setAvatarUrl(DEFAULT_NIKILOW_AVATAR);
     setPrompt(DEFAULT_NIKILOW_PROMPT);
     onResetToDefault();
-    setFeedback("rolled back to nikilow's prompt");
+    notifyLiveChange(DEFAULT_NIKILOW_NAME, DEFAULT_NIKILOW_PROMPT, DEFAULT_NIKILOW_AVATAR);
+    setFeedback("rolled back to niki's prompt");
     setTimeout(() => setFeedback(null), 3000);
   };
 
@@ -152,45 +188,47 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
     setTimeout(() => {
       setFeedback(null);
       onClose?.();
-    }, 1200);
+    }, 1000);
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto p-4 sm:p-5 space-y-5 select-none">
-      {/* Header Info Banner */}
-      <div className="flex items-start justify-between gap-3 p-3.5 rounded-2xl bg-white/70 dark:bg-[#161a22]/70 border border-gray-200/80 dark:border-gray-800/80 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-[#007AFF]">
-            <Sparkles size={18} />
+    <div className="flex flex-col h-full overflow-y-auto p-4 sm:p-5 space-y-4 select-none">
+      {/* Live Companion Visual Preview Card */}
+      <div className="p-3.5 rounded-2xl bg-[#141824] border border-pink-500/30 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden ring-2 ring-pink-500/40 shadow-xs shrink-0 bg-gray-800">
+            <img
+              src={avatarUrl || DEFAULT_NIKILOW_AVATAR}
+              alt={name || 'niki'}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.src = DEFAULT_NIKILOW_AVATAR;
+              }}
+            />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <span>personality settings</span>
-              <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                  isDefaultNikilow
-                    ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
-                    : 'bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400'
-                }`}
-              >
-                {isDefaultNikilow ? 'default nikilow' : 'custom'}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-white tracking-tight truncate">
+                {name.trim() || DEFAULT_NIKILOW_NAME}
               </span>
-            </h3>
-            {userProfile ? (
-              <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
-                synced with account @{userProfile.username}
-              </p>
-            ) : (
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                saved locally (sign in to sync to your account)
-              </p>
-            )}
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-pink-500/15 text-pink-400 border border-pink-500/20">
+                live
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-400 font-mono truncate mt-0.5 max-w-[200px] sm:max-w-xs">
+              {prompt.trim() || 'default prompt active'}
+            </p>
           </div>
+        </div>
+        <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>instant</span>
         </div>
       </div>
 
       {feedback && (
-        <div className="px-3.5 py-2 text-xs font-medium rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center gap-2">
+        <div className="px-3.5 py-2 text-xs font-medium rounded-xl bg-emerald-950/30 text-emerald-400 border border-emerald-800/60 flex items-center gap-2">
           <Check size={14} />
           <span>{feedback}</span>
         </div>
@@ -199,12 +237,12 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Avatar Setup */}
         <div className="space-y-2.5">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
             avatar image
           </label>
           <div className="flex items-center gap-4">
             <div className="relative group">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 shadow-sm bg-gray-100 dark:bg-gray-800">
+              <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-gray-700 shadow-sm bg-gray-800">
                 <img
                   src={avatarUrl}
                   alt={name}
@@ -223,7 +261,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#181d26] hover:bg-gray-50 dark:hover:bg-[#202734] border border-gray-200 dark:border-gray-800 text-xs font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-[#181d26] hover:bg-[#202734] border border-gray-800 text-xs font-medium text-gray-200 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer hover-jump-sm"
                 >
                   <Upload size={13} />
                   <span>{isUploading ? 'uploading...' : 'upload photo'}</span>
@@ -239,7 +277,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowUrlInput((prev) => !prev)}
-                  className="px-3 py-1.5 rounded-xl bg-transparent hover:bg-gray-200/50 dark:hover:bg-gray-800/40 text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-transparent hover:bg-gray-800/40 text-xs font-medium text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer hover-jump-sm"
                 >
                   <ImageIcon size={13} />
                   <span>image url</span>
@@ -253,12 +291,12 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
                   <button
                     key={preset.name}
                     type="button"
-                    onClick={() => setAvatarUrl(preset.url)}
+                    onClick={() => handleAvatarChange(preset.url)}
                     title={preset.name}
-                    className={`w-6 h-6 rounded-full overflow-hidden ring-1 transition-all cursor-pointer ${
+                    className={`w-6 h-6 rounded-full overflow-hidden ring-1 transition-all cursor-pointer hover-jump-sm ${
                       avatarUrl === preset.url
-                        ? 'ring-2 ring-[#007AFF] scale-110'
-                        : 'ring-gray-300 dark:ring-gray-700 opacity-70 hover:opacity-100'
+                        ? 'ring-2 ring-pink-500 scale-110'
+                        : 'ring-gray-700 opacity-70 hover:opacity-100'
                     }`}
                   >
                     <img
@@ -278,9 +316,9 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
               <input
                 type="url"
                 value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
+                onChange={(e) => handleAvatarChange(e.target.value)}
                 placeholder="https://example.com/avatar.jpg"
-                className="w-full px-3 py-2 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-gray-400 dark:focus:border-gray-600"
+                className="w-full px-3 py-2 text-xs bg-[#161a22] border border-gray-800 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-hidden focus:border-pink-500"
               />
             </div>
           )}
@@ -288,9 +326,12 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
 
         {/* Companion Name */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            companion name
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
+              companion name
+            </label>
+            <span className="text-[10px] text-pink-400 font-mono">updates live</span>
+          </div>
           <div className="relative">
             <User
               size={14}
@@ -299,10 +340,10 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. nikilow, alice, eva"
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="e.g. niki, alice, eva"
               maxLength={32}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-gray-400 dark:focus:border-gray-600"
+              className="w-full pl-9 pr-3 py-2 text-xs bg-[#161a22] border border-gray-800 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-hidden focus:border-pink-500"
             />
           </div>
         </div>
@@ -310,23 +351,26 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
         {/* Prompt / Instructions */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
               personality prompt / instructions
             </label>
-            <span className="text-[10px] text-gray-400 font-mono">
-              {prompt.length} chars
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-pink-400 font-mono">updates live</span>
+              <span className="text-[10px] text-gray-500 font-mono">
+                {prompt.length} chars
+              </span>
+            </div>
           </div>
 
           <textarea
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => handlePromptChange(e.target.value)}
             rows={7}
             placeholder="describe how your companion should speak, behave, their tone, opinions, or specific rules..."
-            className="w-full p-3 text-xs font-mono leading-relaxed bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-gray-400 dark:focus:border-gray-600 resize-none"
+            className="w-full p-3 text-xs font-mono leading-relaxed bg-[#161a22] border border-gray-800 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-hidden focus:border-pink-500 resize-none"
           />
 
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
+          <p className="text-[11px] text-gray-400 flex items-center gap-1">
             <HelpCircle size={12} />
             <span>
               instruct her vibe, humor, favorite topics, or language rules (&quot;без воды&quot;).
@@ -336,21 +380,21 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
 
         {/* Actions row */}
         <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-          {/* Roll back to Nikilow's prompt button */}
+          {/* Roll back to Niki's prompt button */}
           <button
             type="button"
             onClick={handleRollback}
-            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-200/70 hover:bg-gray-200 dark:bg-gray-800/60 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-            title="Restore original Nikilow prompt and avatar"
+            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium text-gray-300 hover:text-white bg-gray-800/60 hover:bg-gray-800 transition-colors cursor-pointer hover-jump-sm"
+            title="Restore original Niki prompt and avatar"
           >
             <RotateCcw size={13} />
-            <span>roll back to nikilow</span>
+            <span>roll back to niki</span>
           </button>
 
           {/* Save button */}
           <button
             type="submit"
-            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs font-semibold shadow-xs transition-all active:scale-[0.99] cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold shadow-xs transition-all active:scale-[0.99] cursor-pointer hover-jump-sm"
           >
             <Check size={14} />
             <span>save personality</span>

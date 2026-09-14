@@ -84,11 +84,15 @@ export const MessageItem: FC<MessageItemProps> = ({
         } max-w-[85%] sm:max-w-[78%]`}
       >
         <div
-          className={`relative px-4 py-2.5 rounded-2xl text-sm leading-relaxed tracking-normal whitespace-pre-wrap select-text ${
+          className={`relative px-4 py-2.5 rounded-2xl text-sm leading-relaxed tracking-normal whitespace-pre-wrap select-text transition-all duration-200 ${
             isUser
-              ? 'bg-[#007AFF] text-white rounded-tr-xs shadow-xs'
-              : 'bg-white dark:bg-[#181d26] text-gray-800 dark:text-gray-200 border border-gray-200/80 dark:border-gray-800 rounded-tl-xs shadow-xs'
+              ? 'chat-bubble-user rounded-tr-xs shadow-xs'
+              : 'chat-bubble-companion rounded-tl-xs shadow-xs'
           }`}
+          style={{
+            backgroundColor: isUser ? 'var(--accent)' : 'var(--companion-msg-bg)',
+            borderColor: isUser ? undefined : 'var(--border-color)',
+          }}
         >
           {renderMentions(message.content, onMentionClick)}
           {isStreaming && (

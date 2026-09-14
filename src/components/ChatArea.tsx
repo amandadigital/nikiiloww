@@ -12,8 +12,6 @@ import {
   ArrowDown,
   Sparkles,
   RefreshCw,
-  LogIn,
-  User,
   Menu,
 } from 'lucide-react';
 import {
@@ -22,6 +20,8 @@ import {
   CompanionPersonality,
   DEFAULT_NIKILOW_AVATAR,
 } from '../types';
+import { AccentColor, ACCENT_CONFIG } from '../utils/theme';
+import { ChatWallpaperSettings, WALLPAPER_PRESETS } from '../utils/wallpaper';
 import { MessageItem } from './MessageItem';
 import { VerifiedBadge } from './VerifiedBadge';
 
@@ -37,6 +37,9 @@ interface ChatAreaProps {
   onOpenAuth: () => void;
   personality: CompanionPersonality;
   onMentionClick?: (username: string) => void;
+  wallpaperSettings?: ChatWallpaperSettings;
+  onOpenVisualisation?: () => void;
+  accentColor?: AccentColor;
 }
 
 export const ChatArea: FC<ChatAreaProps> = ({
@@ -51,6 +54,9 @@ export const ChatArea: FC<ChatAreaProps> = ({
   onOpenAuth,
   personality,
   onMentionClick,
+  wallpaperSettings,
+  onOpenVisualisation,
+  accentColor = 'rose',
 }) => {
   const [inputText, setInputText] = useState('');
   const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -58,21 +64,23 @@ export const ChatArea: FC<ChatAreaProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isKodewt =
+  const isMisiori =
     userProfile &&
-    (userProfile.username.toLowerCase() === 'kodewt' ||
-      userProfile.name.toLowerCase().includes('kodewt'));
+    (userProfile.username.toLowerCase() === 'misiori' ||
+      userProfile.username.toLowerCase() === 'kodewt' ||
+      userProfile.name.toLowerCase().includes('misiori'));
 
-  const companionName = personality.name || 'nikilow';
+  const companionName = personality.name || 'niki';
   const companionAvatar = personality.avatarUrl || DEFAULT_NIKILOW_AVATAR;
+  const accentCfg = ACCENT_CONFIG[accentColor] || ACCENT_CONFIG.rose;
 
-  const starters = isKodewt
+  const starters = isMisiori
     ? [
-        `hey ${companionName.toLowerCase()}, how are you today?`,
+        `hey ${companionName.toLowerCase()}, missed you today.`,
         'what are you thinking about right now?',
         'tell me what you did today.',
-        'did you get enough sleep last night?',
-        'tell me a thoughtful thought.',
+        'how is naisuru looking to you?',
+        'tell me something sweet.',
       ]
     : [
         "what's on your mind today?",
@@ -81,6 +89,36 @@ export const ChatArea: FC<ChatAreaProps> = ({
         'tell me an honest truth about the world.',
         'what made you smile recently?',
       ];
+
+  // Derive background style for wallpaper
+  const getWallpaperBackground = () => {
+    if (!wallpaperSettings || wallpaperSettings.id === 'none') return null;
+
+    if (wallpaperSettings.id === 'custom' && wallpaperSettings.customUrl) {
+      return {
+        backgroundImage: `url(${wallpaperSettings.customUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      };
+    }
+
+    const preset = WALLPAPER_PRESETS.find((p) => p.id === wallpaperSettings.id);
+    if (!preset || preset.bgStyle === 'none') return null;
+
+    if (preset.isImage) {
+      return {
+        backgroundImage: `url(${preset.bgStyle})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      };
+    }
+
+    return {
+      backgroundImage: preset.bgStyle,
+    };
+  };
+
+  const wallpaperBgStyle = getWallpaperBackground();
 
   // Auto-scroll when messages change or stream updates
   useEffect(() => {
@@ -133,11 +171,20 @@ export const ChatArea: FC<ChatAreaProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fbfbfa] dark:bg-[#0b0d11] relative pb-16">
+    <div
+      className="flex-1 flex flex-col h-full overflow-hidden relative pb-16 md:pb-0"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
       {/* Top navigation header */}
-      <header className="h-14 flex items-center justify-between px-3 sm:px-4 border-b border-gray-200/70 dark:border-gray-800/80 bg-white/70 dark:bg-[#0e1117]/70 backdrop-blur-md z-10 select-none">
+      <header
+        className="h-14 flex items-center justify-between px-3 sm:px-4 border-b z-10 select-none transition-colors"
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          borderColor: 'var(--border-color)',
+        }}
+      >
         <div className="flex items-center gap-2.5">
-          {/* Menu button in Nikilow's header (opens modal menu) */}
+          {/* Menu button in companion's header (opens modal menu) */}
           <button
             id="chat-menu-btn"
             onClick={onOpenMenu}
@@ -153,7 +200,10 @@ export const ChatArea: FC<ChatAreaProps> = ({
             <button
               type="button"
               onClick={onOpenMenu}
-              className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-gray-200 dark:ring-gray-700 shadow-2xs hover:ring-2 hover:ring-[#007AFF] transition-all cursor-pointer bg-gray-100 dark:bg-gray-800"
+              className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-gray-200 dark:ring-gray-700 shadow-2xs transition-all cursor-pointer bg-gray-100 dark:bg-gray-800"
+              style={{
+                borderColor: accentCfg.hex,
+              }}
               title={`${companionName} settings & menu`}
             >
               <img
@@ -165,56 +215,24 @@ export const ChatArea: FC<ChatAreaProps> = ({
                   e.currentTarget.src = DEFAULT_NIKILOW_AVATAR;
                 }}
               />
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-1.5 ring-white dark:ring-[#0e1117]" />
             </button>
 
             <div className="flex items-center gap-1.5">
               <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100 tracking-tight truncate max-w-[140px] sm:max-w-none">
                 {companionName}
               </h1>
-              {isKodewt && companionName.toLowerCase() === 'nikilow' && (
-                <VerifiedBadge size="sm" />
+              {(companionName.toLowerCase() === 'niki' || companionName.toLowerCase() === 'nikilow') && (
+                <VerifiedBadge size="sm" isBoyfriend={false} />
               )}
-              <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-1">
-                online
-              </span>
             </div>
           </div>
         </div>
 
         {/* Right side controls */}
         <div className="flex items-center gap-2">
-          {userProfile ? (
-            <button
-              onClick={onOpenProfile}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200/80 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium transition-colors cursor-pointer"
-              title="open profile"
-            >
-              {userProfile.avatar_url ? (
-                <img
-                  src={userProfile.avatar_url}
-                  alt={userProfile.name}
-                  className="w-4 h-4 rounded-full object-cover"
-                />
-              ) : (
-                <User size={13} />
-              )}
-              <span className="hidden sm:inline">@{userProfile.username}</span>
-              {isKodewt && <VerifiedBadge size="sm" />}
-            </button>
-          ) : (
-            <button
-              onClick={onOpenAuth}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 text-xs font-medium transition-colors shadow-2xs cursor-pointer"
-            >
-              <LogIn size={13} />
-              <span>sign in</span>
-            </button>
-          )}
-
           <button
             onClick={onNewChat}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all hover-jump-sm cursor-pointer"
             title="start new conversation"
           >
             <RefreshCw size={13} />
@@ -223,12 +241,25 @@ export const ChatArea: FC<ChatAreaProps> = ({
         </div>
       </header>
 
-      {/* Main chat messages view */}
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-2 py-4 space-y-2 scroll-smooth"
-      >
+      {/* Main chat messages container with wallpaper strictly inside it (ABOVE the text box) */}
+      <div className="relative flex-1 overflow-hidden flex flex-col">
+        {wallpaperBgStyle && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none transition-all duration-300 z-0"
+            style={{
+              ...wallpaperBgStyle,
+              opacity: wallpaperSettings?.opacity ?? 0.35,
+              filter: wallpaperSettings?.blur ? `blur(${wallpaperSettings.blur}px)` : undefined,
+            }}
+          />
+        )}
+
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto px-2 py-4 space-y-2 scroll-smooth relative z-1"
+        >
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center max-w-xl mx-auto px-4 text-center select-none">
             {/* Companion Photo Avatar */}
@@ -242,20 +273,19 @@ export const ChatArea: FC<ChatAreaProps> = ({
                   e.currentTarget.src = DEFAULT_NIKILOW_AVATAR;
                 }}
               />
-              <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#151922]" />
             </div>
 
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight mb-1.5 flex items-center justify-center gap-1.5">
               <span>
-                {isKodewt && companionName.toLowerCase() === 'nikilow'
-                  ? 'hey kodewt'
+                {isMisiori && (companionName.toLowerCase() === 'niki' || companionName.toLowerCase() === 'nikilow')
+                  ? 'hey misiori'
                   : `hey, i'm ${companionName.toLowerCase()}.`}
               </span>
-              {isKodewt && companionName.toLowerCase() === 'nikilow' && (
+              {isMisiori && (companionName.toLowerCase() === 'niki' || companionName.toLowerCase() === 'nikilow') && (
                 <VerifiedBadge size="md" />
               )}
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mb-7 leading-relaxed">
+            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mb-7 leading-relaxed font-mono">
               thoughtful, observant, and always here to talk. what&apos;s on your mind?
             </p>
 
@@ -267,7 +297,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
                 <button
                   key={idx}
                   onClick={() => onSendMessage(starter)}
-                  className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-[#141822] border border-gray-200/80 dark:border-gray-800/80 hover:border-gray-400 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-[#181d29] transition-all shadow-2xs active:scale-[0.99] flex items-center justify-between group cursor-pointer"
+                  className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-[#141822] border border-gray-200/80 dark:border-gray-800/80 hover:border-gray-400 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-[#181d29] transition-all shadow-2xs active:scale-[0.99] flex items-center justify-between group cursor-pointer hover-jump-sm"
                 >
                   <span>{starter}</span>
                   <Sparkles
@@ -299,22 +329,32 @@ export const ChatArea: FC<ChatAreaProps> = ({
             <div ref={messagesEndRef} className="h-4" />
           </div>
         )}
+        </div>
       </div>
 
       {/* Scroll to bottom button */}
       {showScrollBottom && (
         <button
           onClick={scrollToBottom}
-          className="absolute bottom-20 right-6 p-2 rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all z-20 cursor-pointer"
+          className="absolute bottom-28 md:bottom-16 right-6 p-2 rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all z-20 cursor-pointer hover-jump"
           aria-label="scroll to bottom"
         >
           <ArrowDown size={16} />
         </button>
       )}
 
-      {/* Chat Input Field (docked directly above the navigation bar) */}
-      <div className="p-2 sm:p-2.5 bg-white/90 dark:bg-[#0e1117]/90 backdrop-blur-md border-t border-gray-200/70 dark:border-gray-800/70">
-        <div className="max-w-3xl mx-auto relative flex items-end gap-2 bg-gray-100 dark:bg-[#181d26] rounded-2xl p-1.5 pl-3 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-700 transition-all">
+      {/* Chat Input Field (docked directly above navigation bar - no wallpaper behind it) */}
+      <div
+        className="p-2 sm:p-2.5 border-t relative z-10 transition-colors"
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          borderColor: 'var(--border-color)',
+        }}
+      >
+        <div
+          className="max-w-3xl mx-auto relative flex items-end gap-2 rounded-2xl p-1.5 pl-3 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-700 transition-all hover-jump-sm"
+          style={{ backgroundColor: 'var(--bg-secondary, rgba(125,125,125,0.08))' }}
+        >
           <textarea
             ref={textareaRef}
             value={inputText}
@@ -328,7 +368,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
           {isStreaming ? (
             <button
               onClick={onStopStreaming}
-              className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors shrink-0 cursor-pointer"
+              className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all shrink-0 cursor-pointer hover-jump-sm"
               title="stop response"
             >
               <Square size={16} className="fill-current" />
@@ -337,7 +377,10 @@ export const ChatArea: FC<ChatAreaProps> = ({
             <button
               onClick={handleSubmit}
               disabled={!inputText.trim()}
-              className="p-2 rounded-xl bg-[#007AFF] hover:bg-[#0066d6] text-white disabled:opacity-30 disabled:pointer-events-none transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+              className="p-2 rounded-xl text-white disabled:opacity-30 disabled:pointer-events-none transition-all shrink-0 cursor-pointer shadow-xs active:scale-95 hover-jump"
+              style={{
+                backgroundColor: accentCfg.hex,
+              }}
               title="send message"
             >
               <Send size={16} />

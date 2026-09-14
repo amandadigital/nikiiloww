@@ -31,8 +31,8 @@ export function renderMentions(
           }}
           className={`inline-flex items-center gap-1 font-medium transition-colors cursor-pointer hover:underline ${
             isKodewt
-              ? 'text-[#007AFF] dark:text-[#3897f0] font-semibold'
-              : 'text-[#007AFF] dark:text-[#3897f0]'
+              ? 'text-pink-500 dark:text-pink-400 font-semibold'
+              : 'text-pink-500 dark:text-pink-400'
           }`}
           title={`View @${rawUsername}'s profile`}
         >
