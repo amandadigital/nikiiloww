@@ -62,6 +62,8 @@ import {
   fetchUserProfile,
   syncChatToSupabase,
   loadChatsFromSupabase,
+  deleteChatFromSupabase,
+  clearAllChatsFromSupabase,
   fetchFeedPosts,
   createFeedPost,
   deleteFeedPost,
@@ -178,12 +180,12 @@ export default function App() {
   );
 
   const handleSavePersonality = useCallback(
-    async (updated: CompanionPersonality) => {
+    (updated: CompanionPersonality) => {
+      // 1. Instant local persistence and state update (zero lag)
       saveCompanionPersonality(updated);
       setPersonality(updated);
 
       if (userProfile?.id) {
-        await savePersonalityToAccount(userProfile.id, updated);
         setUserProfile((prev) =>
           prev
             ? {
@@ -195,6 +197,10 @@ export default function App() {
               }
             : null
         );
+        // 2. Sync to cloud account in background
+        savePersonalityToAccount(userProfile.id, updated).catch((err) => {
+          console.warn('Background personality sync notice:', err);
+        });
       }
     },
     [userProfile?.id]
@@ -269,7 +275,7 @@ export default function App() {
     refreshPosts();
   }, [refreshPosts]);
 
-  // Helper: safely merge cloud chats with local sessions without overwriting active messages
+  // Helper: safely merge cloud chats with local sessions uniting messages by id across devices
   const mergeChatSessions = (cloudList: ChatSession[], currentList: ChatSession[]): ChatSession[] => {
     if (!cloudList || cloudList.length === 0) return currentList;
     const map = new Map<string, ChatSession>();
@@ -279,22 +285,31 @@ export default function App() {
       map.set(c.id, c);
     }
 
-    // Overlay current local sessions
+    // Overlay current local sessions uniting messages across devices
     for (const cur of currentList) {
       const existing = map.get(cur.id);
       if (!existing) {
-        // If current local session has any messages or map is empty, preserve it
         if (cur.messages.length > 0 || map.size === 0) {
           map.set(cur.id, cur);
         }
       } else {
-        // Keep whichever has more messages or more recent updates
-        const preferLocal =
-          cur.messages.length >= existing.messages.length || cur.updatedAt >= existing.updatedAt;
+        const msgMap = new Map<string, Message>();
+        for (const m of existing.messages) {
+          if (m && m.id) msgMap.set(m.id, m);
+        }
+        for (const m of cur.messages) {
+          if (m && m.id) msgMap.set(m.id, m);
+        }
+        const combinedMessages = Array.from(msgMap.values()).sort(
+          (a, b) => (a.createdAt || 0) - (b.createdAt || 0)
+        );
+
         map.set(cur.id, {
-          ...(preferLocal ? existing : cur),
-          ...(preferLocal ? cur : existing),
-          messages: cur.messages.length >= existing.messages.length ? cur.messages : existing.messages,
+          ...existing,
+          ...cur,
+          title: cur.title || existing.title,
+          updatedAt: Math.max(cur.updatedAt || 0, existing.updatedAt || 0),
+          messages: combinedMessages,
         });
       }
     }
@@ -325,14 +340,20 @@ export default function App() {
         // Safely merge chats from Supabase without deleting active messages
         const cloudChats = await loadChatsFromSupabase(session.user.id);
         if (cloudChats && cloudChats.length > 0) {
+          let updatedMerged: ChatSession[] = [];
           setSessions((prev) => {
             const merged = mergeChatSessions(cloudChats, prev);
+            updatedMerged = merged;
             saveSessions(merged);
             return merged;
           });
           setActiveSessionId((prevId) => {
-            if (prevId) return prevId;
-            return cloudChats[0].id;
+            const currentActive = updatedMerged.find((s) => s.id === prevId);
+            if (!currentActive || currentActive.messages.length === 0) {
+              const sessionWithMessages = updatedMerged.find((s) => s.messages.length > 0);
+              if (sessionWithMessages) return sessionWithMessages.id;
+            }
+            return prevId || updatedMerged[0]?.id;
           });
         }
       }
@@ -359,10 +380,20 @@ export default function App() {
 
         const cloudChats = await loadChatsFromSupabase(session.user.id);
         if (cloudChats && cloudChats.length > 0) {
+          let updatedMerged: ChatSession[] = [];
           setSessions((prev) => {
             const merged = mergeChatSessions(cloudChats, prev);
+            updatedMerged = merged;
             saveSessions(merged);
             return merged;
+          });
+          setActiveSessionId((prevId) => {
+            const currentActive = updatedMerged.find((s) => s.id === prevId);
+            if (!currentActive || currentActive.messages.length === 0) {
+              const sessionWithMessages = updatedMerged.find((s) => s.messages.length > 0);
+              if (sessionWithMessages) return sessionWithMessages.id;
+            }
+            return prevId || updatedMerged[0]?.id;
           });
         }
       } else {
@@ -661,6 +692,11 @@ export default function App() {
   };
 
   const handleDeleteSession = (id: string) => {
+    if (userProfile?.id) {
+      deleteChatFromSupabase(id, userProfile.id).catch((err) => {
+        console.warn('deleteChatFromSupabase notice:', err);
+      });
+    }
     setSessions((prev) => {
       const remaining = prev.filter((s) => s.id !== id);
       if (remaining.length === 0) {
@@ -678,6 +714,11 @@ export default function App() {
   const handleClearAllConfirm = () => {
     if (isStreaming) {
       handleStopStreaming();
+    }
+    if (userProfile?.id) {
+      clearAllChatsFromSupabase(userProfile.id).catch((err) => {
+        console.warn('clearAllChatsFromSupabase notice:', err);
+      });
     }
     clearSavedSessions();
     const fresh = createNewSession();
@@ -752,23 +793,38 @@ export default function App() {
 
     setActiveSessionId(currentSessionId);
 
-    // Build cross-chat context from all other sessions so Nikilow remembers everything across chats
+    // Immediately sync user message to Supabase so it persists across devices right away
+    if (userProfile?.id) {
+      const immediateChat: ChatSession = {
+        ...activeSession,
+        id: currentSessionId,
+        title: activeSession.messages.length === 0 ? cleanUserText.slice(0, 32) : activeSession.title,
+        updatedAt: Date.now(),
+        messages: [...existingMessages, userMessage],
+      };
+      syncChatToSupabase(immediateChat, userProfile.id).catch((err) => {
+        console.warn('Immediate chat sync notice:', err);
+      });
+    }
+
+    // Build comprehensive cross-chat memory so companion remembers everything across sessions
     const otherSessions = sessions.filter((s) => s.id !== currentSessionId);
     const crossChatNotes: string[] = [];
     for (const s of otherSessions) {
       if (s.messages.length > 0) {
-        const userMsgs = s.messages
-          .filter((m) => m.role === 'user')
-          .map((m) => m.content.trim())
-          .filter(Boolean);
-        if (userMsgs.length > 0) {
+        // Collect conversation context (user questions & companion answers)
+        const exchanges = s.messages.slice(-6).map((m) => {
+          const roleLabel = m.role === 'user' ? 'User' : (personality?.name || 'Nikilow');
+          return `${roleLabel}: ${m.content.trim().slice(0, 180)}`;
+        });
+        if (exchanges.length > 0) {
           crossChatNotes.push(
-            `[Chat "${s.title}"]: ${userMsgs.slice(-3).join(' | ')}`
+            `[Chat "${s.title || 'Untitled'}"]:\n${exchanges.join('\n')}`
           );
         }
       }
     }
-    const crossChatContext = crossChatNotes.slice(0, 10).join('\n');
+    const crossChatContext = crossChatNotes.slice(0, 15).join('\n\n');
 
     setIsStreaming(true);
     const abortController = new AbortController();

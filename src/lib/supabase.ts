@@ -659,40 +659,71 @@ export async function uploadAvatarImage(userId: string, file: File): Promise<str
 /**
  * Sync chats and messages to Supabase when user is logged in
  */
-export async function syncChatToSupabase(chat: ChatSession, userId: string) {
+export async function syncChatToSupabase(chat: ChatSession, userId: string): Promise<boolean> {
+  if (!chat || !userId) return false;
   try {
-    // Upsert chat
-    await supabase.from('chats').upsert({
-      id: chat.id,
-      user_id: userId,
-      title: chat.title,
-      created_at: new Date(chat.createdAt).toISOString(),
-      updated_at: new Date(chat.updatedAt).toISOString(),
-    });
-
-    // Upsert messages
-    if (chat.messages.length > 0) {
-      const msgRows = chat.messages.map((m) => ({
-        id: m.id,
-        chat_id: chat.id,
+    // 1. Upsert chat record
+    const { error: chatErr } = await supabase.from('chats').upsert(
+      {
+        id: chat.id,
         user_id: userId,
-        role: m.role,
-        content: m.content,
-        created_at: new Date(m.createdAt).toISOString(),
-      }));
+        title: chat.title || 'new conversation',
+        created_at: new Date(chat.createdAt || Date.now()).toISOString(),
+        updated_at: new Date(chat.updatedAt || Date.now()).toISOString(),
+      },
+      { onConflict: 'id' }
+    );
 
-      await supabase.from('messages').upsert(msgRows);
+    if (chatErr) {
+      console.warn('Sync chat error (make sure fix-messages-sync.sql is run in Supabase):', chatErr.message || chatErr);
+      return false;
     }
-  } catch (e) {
-    // Database tables might not be migrated yet; fail silently
-    console.warn('Sync to Supabase skipped (run supabase_schema.sql if needed):', e);
+
+    // 2. Upsert messages
+    if (chat.messages && chat.messages.length > 0) {
+      const msgRows = chat.messages
+        .filter((m) => m && m.id && m.content)
+        .map((m) => ({
+          id: m.id,
+          chat_id: chat.id,
+          user_id: userId,
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content || '',
+          created_at: new Date(m.createdAt || Date.now()).toISOString(),
+        }));
+
+      if (msgRows.length > 0) {
+        // Attempt bulk upsert
+        const { error: msgErr } = await supabase
+          .from('messages')
+          .upsert(msgRows, { onConflict: 'id' });
+
+        if (msgErr) {
+          console.warn('Bulk message upsert notice, trying individual rows:', msgErr.message || msgErr);
+          // Fallback: upsert message rows individually
+          for (const row of msgRows) {
+            const { error: singleErr } = await supabase
+              .from('messages')
+              .upsert(row, { onConflict: 'id' });
+            if (singleErr) {
+              console.warn(`Message sync single error for ${row.id}:`, singleErr.message || singleErr);
+            }
+          }
+        }
+      }
+    }
+    return true;
+  } catch (e: any) {
+    console.warn('syncChatToSupabase failed:', e?.message || e);
+    return false;
   }
 }
 
 /**
- * Load chats from Supabase for current user
+ * Load chats from Supabase for current user with high performance
  */
 export async function loadChatsFromSupabase(userId: string): Promise<ChatSession[] | null> {
+  if (!userId) return null;
   try {
     const { data: chatRows, error: chatErr } = await supabase
       .from('chats')
@@ -700,38 +731,51 @@ export async function loadChatsFromSupabase(userId: string): Promise<ChatSession
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
 
-    if (chatErr || !chatRows || chatRows.length === 0) {
+    if (chatErr) {
+      console.warn('loadChatsFromSupabase chats error:', chatErr.message || chatErr);
       return null;
     }
 
-    const sessions: ChatSession[] = [];
-
-    for (const c of chatRows) {
-      const { data: msgRows } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', c.id)
-        .order('created_at', { ascending: true });
-
-      const messages: Message[] = (msgRows || []).map((m) => ({
-        id: m.id,
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-        createdAt: new Date(m.created_at).getTime(),
-      }));
-
-      sessions.push({
-        id: c.id,
-        title: c.title,
-        messages,
-        createdAt: new Date(c.created_at).getTime(),
-        updatedAt: new Date(c.updated_at).getTime(),
-      });
+    if (!chatRows || chatRows.length === 0) {
+      return null;
     }
 
+    // Fetch all messages for these chats in a single batch query
+    const chatIds = chatRows.map((c) => c.id);
+    const { data: msgRows, error: msgErr } = await supabase
+      .from('messages')
+      .select('*')
+      .in('chat_id', chatIds)
+      .order('created_at', { ascending: true });
+
+    if (msgErr) {
+      console.warn('loadChatsFromSupabase messages error:', msgErr.message || msgErr);
+    }
+
+    // Group messages by chat_id
+    const messagesByChat = new Map<string, Message[]>();
+    for (const m of msgRows || []) {
+      const list = messagesByChat.get(m.chat_id) || [];
+      list.push({
+        id: m.id,
+        role: m.role as 'user' | 'assistant',
+        content: m.content || '',
+        createdAt: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+      });
+      messagesByChat.set(m.chat_id, list);
+    }
+
+    const sessions: ChatSession[] = chatRows.map((c) => ({
+      id: c.id,
+      title: c.title || 'new conversation',
+      messages: messagesByChat.get(c.id) || [],
+      createdAt: c.created_at ? new Date(c.created_at).getTime() : Date.now(),
+      updatedAt: c.updated_at ? new Date(c.updated_at).getTime() : Date.now(),
+    }));
+
     return sessions;
-  } catch (err) {
-    console.warn('loadChatsFromSupabase skipped:', err);
+  } catch (err: any) {
+    console.warn('loadChatsFromSupabase skipped:', err?.message || err);
     return null;
   }
 }

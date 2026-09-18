@@ -61,9 +61,6 @@ export const MoreView: FC<MoreViewProps> = ({
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
                   naisuru
                 </h2>
-                <span className="text-[11px] text-gray-400 font-mono">
-                  (startorigin.me)
-                </span>
               </div>
               <p className="text-[11px] text-gray-400 font-mono">
                 created by{' '}

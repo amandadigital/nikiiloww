@@ -108,7 +108,7 @@ export const IntroAnimation: FC<IntroAnimationProps> = ({ onComplete }) => {
               transition={{ delay: 0.45, duration: 0.7 }}
               className="text-xs font-mono text-gray-400 tracking-wide"
             >
-              startorigin.me
+              naisuru
             </motion.p>
           </motion.div>
         )}

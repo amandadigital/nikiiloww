@@ -1,12 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { GoogleGenAI } from "@google/genai";
 
-// Candidate models in priority order
+// Candidate models in priority order: start with fastest low-latency models for instant response
 export const CANDIDATE_MODELS = [
-  "gemini-3.8-flash",
   "gemini-3.1-flash-lite",
-  "gemini-3.6-flash",
   "gemini-flash-latest",
+  "gemini-3.8-flash",
+  "gemini-3.6-flash",
 ];
 
 function getGeminiClient(): GoogleGenAI {
@@ -55,10 +55,14 @@ function getSystemInstruction(
 * To this user ("${userDisplayName}"), be a great companion and genuine friend. Address them by their name when natural.`;
 
   const memoryBlock = crossChatContext
-    ? `\n\nCROSS-CHAT MEMORY (YOU REMEMBER EVERYTHING ACROSS CHATS):
-You have continuous memory across all your conversations with this user. You recall past discussions, their interests, personal details, and things you talked about in other chats. Reference them naturally when relevant:
-${crossChatContext}`
-    : "";
+    ? `\n\nCONTINUOUS CROSS-CHAT & LONG-TERM MEMORY:
+You have continuous long-term memory across all chats with this user. You recall their past messages, topics, opinions, projects, preferences, and personal details:
+${crossChatContext}
+Directives on Memory:
+* You remember everything they told you across chats and previous turns.
+* Reference past topics or inside jokes naturally. Never act like you forgot or ask them to repeat details they already shared.`
+    : `\n\nCONTINUOUS LONG-TERM MEMORY:
+You have continuous long-term memory of this user. You recall all personal details, preferences, stories, and context they share across turns.`;
 
   if (customPrompt) {
     return `You are ${companionName}.
@@ -192,16 +196,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const model of CANDIDATE_MODELS) {
       if (clientClosed) break;
       try {
-        // 1. Try streaming response
-        const responseStream = await ai.models.generateContentStream({
-          model,
-          contents,
-          config: {
-            systemInstruction,
-            temperature: 0.85,
-            topP: 0.95,
-          },
-        });
+        // Fast streaming configuration with zero thinking budget for instant time-to-first-token
+        let responseStream: any;
+        try {
+          responseStream = await ai.models.generateContentStream({
+            model,
+            contents,
+            config: {
+              systemInstruction,
+              temperature: 0.8,
+              topP: 0.95,
+              thinkingConfig: { thinkingBudget: 0 },
+            },
+          });
+        } catch (_cfgErr) {
+          // Model might not support thinkingConfig, fallback without it
+          responseStream = await ai.models.generateContentStream({
+            model,
+            contents,
+            config: {
+              systemInstruction,
+              temperature: 0.8,
+              topP: 0.95,
+            },
+          });
+        }
 
         let modelYieldedChunk = false;
         for await (const chunk of responseStream) {
@@ -223,17 +242,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // If streaming didn't yield text, try direct generateContent as fallback
         if (!modelYieldedChunk && !clientClosed) {
-          const fullResponse = await ai.models.generateContent({
-            model,
-            contents,
-            config: {
-              systemInstruction,
-              temperature: 0.85,
-              topP: 0.95,
-            },
-          });
+          let fullResponse: any;
+          try {
+            fullResponse = await ai.models.generateContent({
+              model,
+              contents,
+              config: {
+                systemInstruction,
+                temperature: 0.8,
+                topP: 0.95,
+                thinkingConfig: { thinkingBudget: 0 },
+              },
+            });
+          } catch (_genErr) {
+            fullResponse = await ai.models.generateContent({
+              model,
+              contents,
+              config: {
+                systemInstruction,
+                temperature: 0.8,
+                topP: 0.95,
+              },
+            });
+          }
 
-          if (fullResponse.text) {
+          if (fullResponse?.text) {
             res.write(`data: ${JSON.stringify({ text: fullResponse.text })}\n\n`);
             streamSuccess = true;
             break;

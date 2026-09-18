@@ -71,32 +71,16 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
     avatarUrl === DEFAULT_NIKILOW_AVATAR &&
     prompt.trim() === DEFAULT_NIKILOW_PROMPT.trim();
 
-  // Helper to immediately push changes visually to parent and global state
-  const notifyLiveChange = (
-    updatedName: string,
-    updatedPrompt: string,
-    updatedAvatar: string
-  ) => {
-    onSave({
-      name: updatedName.trim() || DEFAULT_NIKILOW_NAME,
-      prompt: updatedPrompt.trim() || DEFAULT_NIKILOW_PROMPT,
-      avatarUrl: updatedAvatar.trim() || DEFAULT_NIKILOW_AVATAR,
-    });
-  };
-
   const handleNameChange = (val: string) => {
     setName(val);
-    notifyLiveChange(val, prompt, avatarUrl);
   };
 
   const handlePromptChange = (val: string) => {
     setPrompt(val);
-    notifyLiveChange(name, val, avatarUrl);
   };
 
   const handleAvatarChange = (newUrl: string) => {
     setAvatarUrl(newUrl);
-    notifyLiveChange(name, prompt, newUrl);
   };
 
   // Compress and handle image file upload
@@ -165,13 +149,17 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
     setAvatarUrl(DEFAULT_NIKILOW_AVATAR);
     setPrompt(DEFAULT_NIKILOW_PROMPT);
     onResetToDefault();
-    notifyLiveChange(DEFAULT_NIKILOW_NAME, DEFAULT_NIKILOW_PROMPT, DEFAULT_NIKILOW_AVATAR);
+    onSave({
+      name: DEFAULT_NIKILOW_NAME,
+      prompt: DEFAULT_NIKILOW_PROMPT,
+      avatarUrl: DEFAULT_NIKILOW_AVATAR,
+    });
     setFeedback("rolled back to niki's prompt");
-    setTimeout(() => setFeedback(null), 3000);
+    setTimeout(() => setFeedback(null), 2500);
   };
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: FormEvent) => {
+    if (e) e.preventDefault();
     const cleanName = name.trim() || DEFAULT_NIKILOW_NAME;
     const cleanPrompt = prompt.trim() || DEFAULT_NIKILOW_PROMPT;
     const cleanAvatar = avatarUrl.trim() || DEFAULT_NIKILOW_AVATAR;
@@ -183,12 +171,11 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
     });
 
     setFeedback(
-      userProfile ? 'personality saved to your account' : 'personality saved'
+      userProfile ? 'saved instantly to your account' : 'saved instantly'
     );
     setTimeout(() => {
       setFeedback(null);
-      onClose?.();
-    }, 1000);
+    }, 2000);
   };
 
   return (
@@ -212,8 +199,8 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
               <span className="text-xs font-semibold text-white tracking-tight truncate">
                 {name.trim() || DEFAULT_NIKILOW_NAME}
               </span>
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-pink-500/15 text-pink-400 border border-pink-500/20">
-                live
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono bg-pink-500/15 text-pink-400 border border-pink-500/20">
+                companion
               </span>
             </div>
             <p className="text-[11px] text-gray-400 font-mono truncate mt-0.5 max-w-[200px] sm:max-w-xs">
@@ -221,9 +208,8 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>instant</span>
+        <div className="flex items-center gap-1 text-[10px] font-mono text-pink-400 shrink-0">
+          <span>custom prompt</span>
         </div>
       </div>
 
@@ -355,7 +341,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
               personality prompt / instructions
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-pink-400 font-mono">updates live</span>
+              <span className="text-[10px] text-gray-400 font-mono">click save or ⌘+enter</span>
               <span className="text-[10px] text-gray-500 font-mono">
                 {prompt.length} chars
               </span>
@@ -365,6 +351,12 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
           <textarea
             value={prompt}
             onChange={(e) => handlePromptChange(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
             rows={7}
             placeholder="describe how your companion should speak, behave, their tone, opinions, or specific rules..."
             className="w-full p-3 text-xs font-mono leading-relaxed bg-[#161a22] border border-gray-800 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-hidden focus:border-pink-500 resize-none"
