@@ -1,15 +1,18 @@
-import { FC, useState, useRef, ChangeEvent, FormEvent, useEffect } from 'react';
+import { FC, useState, useRef, ChangeEvent, FormEvent } from 'react';
 import {
-  Sparkles,
   RotateCcw,
   Check,
   Upload,
   Image as ImageIcon,
   User,
   HelpCircle,
+  Heart,
+  Users,
+  Sparkles,
 } from 'lucide-react';
 import {
   CompanionPersonality,
+  RelationshipStatus,
   DEFAULT_NIKILOW_NAME,
   DEFAULT_NIKILOW_AVATAR,
   DEFAULT_NIKILOW_PROMPT,
@@ -24,66 +27,27 @@ interface PersonalitySettingsProps {
   userProfile?: UserProfile | null;
 }
 
-const PRESET_AVATARS = [
-  {
-    name: 'niki (default)',
-    url: DEFAULT_NIKILOW_AVATAR,
-  },
-  {
-    name: 'cyber aesthetic',
-    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-  },
-  {
-    name: 'moody film',
-    url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&auto=format&fit=crop&q=80',
-  },
-  {
-    name: 'minimalist dark',
-    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-  },
-];
-
 export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
   personality,
   onSave,
-  onResetToDefault,
   onClose,
   userProfile,
 }) => {
-  const [name, setName] = useState(personality.name);
-  const [prompt, setPrompt] = useState(personality.prompt);
-  const [avatarUrl, setAvatarUrl] = useState(personality.avatarUrl);
+  // Local detached form state - does NOT update global personality while writing
+  const [name, setName] = useState(personality.name || DEFAULT_NIKILOW_NAME);
+  const [prompt, setPrompt] = useState(personality.prompt || '');
+  const [avatarUrl, setAvatarUrl] = useState(personality.avatarUrl || DEFAULT_NIKILOW_AVATAR);
+  const [relationshipStatus, setRelationshipStatus] = useState<RelationshipStatus>(
+    personality.relationshipStatus || 'dating_user'
+  );
+  const [partnerName, setPartnerName] = useState(personality.partnerName || '');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync state if external personality changes
-  useEffect(() => {
-    setName(personality.name);
-    setPrompt(personality.prompt);
-    setAvatarUrl(personality.avatarUrl);
-  }, [personality.name, personality.prompt, personality.avatarUrl]);
-
-  const isDefaultNikilow =
-    name.trim().toLowerCase() === DEFAULT_NIKILOW_NAME.toLowerCase() &&
-    avatarUrl === DEFAULT_NIKILOW_AVATAR &&
-    prompt.trim() === DEFAULT_NIKILOW_PROMPT.trim();
-
-  const handleNameChange = (val: string) => {
-    setName(val);
-  };
-
-  const handlePromptChange = (val: string) => {
-    setPrompt(val);
-  };
-
-  const handleAvatarChange = (newUrl: string) => {
-    setAvatarUrl(newUrl);
-  };
-
-  // Compress and handle image file upload
+  // Compress and handle image file upload locally into form state
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -122,9 +86,9 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
           const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          handleAvatarChange(compressedDataUrl);
-          setFeedback('image updated immediately');
-          setTimeout(() => setFeedback(null), 2500);
+          setAvatarUrl(compressedDataUrl);
+          setFeedback('image selected. click save personality to apply.');
+          setTimeout(() => setFeedback(null), 3000);
         }
         setIsUploading(false);
       };
@@ -143,94 +107,74 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
     reader.readAsDataURL(file);
   };
 
-  // Roll back to Niki's original prompt and identity
-  const handleRollback = () => {
-    setName(DEFAULT_NIKILOW_NAME);
-    setAvatarUrl(DEFAULT_NIKILOW_AVATAR);
-    setPrompt(DEFAULT_NIKILOW_PROMPT);
-    onResetToDefault();
-    onSave({
-      name: DEFAULT_NIKILOW_NAME,
-      prompt: DEFAULT_NIKILOW_PROMPT,
-      avatarUrl: DEFAULT_NIKILOW_AVATAR,
-    });
-    setFeedback("rolled back to niki's prompt");
-    setTimeout(() => setFeedback(null), 2500);
-  };
-
   const handleSubmit = (e?: FormEvent) => {
     if (e) e.preventDefault();
+
     const cleanName = name.trim() || DEFAULT_NIKILOW_NAME;
-    const cleanPrompt = prompt.trim() || DEFAULT_NIKILOW_PROMPT;
+    const cleanPrompt = prompt.trim();
     const cleanAvatar = avatarUrl.trim() || DEFAULT_NIKILOW_AVATAR;
 
+    // Apply and save personality across all devices on account
     onSave({
       name: cleanName,
       prompt: cleanPrompt,
       avatarUrl: cleanAvatar,
+      relationshipStatus,
+      partnerName: partnerName.trim(),
     });
 
     setFeedback(
-      userProfile ? 'saved instantly to your account' : 'saved instantly'
+      userProfile
+        ? 'personality saved across all devices on your account'
+        : 'personality saved'
     );
+
     setTimeout(() => {
       setFeedback(null);
-    }, 2000);
+      if (onClose) onClose();
+    }, 1200);
+  };
+
+  const handleRollback = () => {
+    setName(DEFAULT_NIKILOW_NAME);
+    setPrompt(DEFAULT_NIKILOW_PROMPT);
+    setAvatarUrl(DEFAULT_NIKILOW_AVATAR);
+    setRelationshipStatus('dating_user');
+    setPartnerName('');
+    setFeedback('reverted inputs to niki defaults. click save personality to apply.');
+    setTimeout(() => setFeedback(null), 3000);
   };
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 sm:p-5 space-y-4 select-none">
-      {/* Live Companion Visual Preview Card */}
-      <div className="p-3.5 rounded-2xl bg-[#141824] border border-pink-500/30 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 rounded-2xl overflow-hidden ring-2 ring-pink-500/40 shadow-xs shrink-0 bg-gray-800">
-            <img
-              src={avatarUrl || DEFAULT_NIKILOW_AVATAR}
-              alt={name || 'niki'}
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                e.currentTarget.src = DEFAULT_NIKILOW_AVATAR;
-              }}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-white tracking-tight truncate">
-                {name.trim() || DEFAULT_NIKILOW_NAME}
-              </span>
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono bg-pink-500/15 text-pink-400 border border-pink-500/20">
-                companion
-              </span>
-            </div>
-            <p className="text-[11px] text-gray-400 font-mono truncate mt-0.5 max-w-[200px] sm:max-w-xs">
-              {prompt.trim() || 'default prompt active'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 text-[10px] font-mono text-pink-400 shrink-0">
-          <span>custom prompt</span>
-        </div>
+      {/* Header */}
+      <div className="pb-2 border-b border-gray-100 dark:border-gray-800/80">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-gray-100">
+          companion personality
+        </h2>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+          write freely. changes only apply when you click save personality.
+        </p>
       </div>
 
       {feedback && (
         <div className="px-3.5 py-2 text-xs font-medium rounded-xl bg-emerald-950/30 text-emerald-400 border border-emerald-800/60 flex items-center gap-2">
-          <Check size={14} />
+          <Check size={14} className="shrink-0" />
           <span>{feedback}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Avatar Setup */}
-        <div className="space-y-2.5">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
-            avatar image
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            companion avatar
           </label>
           <div className="flex items-center gap-4">
-            <div className="relative group">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-gray-700 shadow-sm bg-gray-800">
+            <div className="relative group shrink-0">
+              <div className="w-14 h-14 rounded-2xl overflow-hidden ring-1 ring-gray-200 dark:ring-gray-700 shadow-xs bg-gray-100 dark:bg-gray-800">
                 <img
-                  src={avatarUrl}
+                  src={avatarUrl || DEFAULT_NIKILOW_AVATAR}
                   alt={name}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
@@ -247,7 +191,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className="px-3 py-1.5 rounded-xl bg-[#181d26] hover:bg-[#202734] border border-gray-800 text-xs font-medium text-gray-200 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer hover-jump-sm"
+                  className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-[#181d26] hover:bg-gray-200 dark:hover:bg-[#202734] border border-gray-200 dark:border-gray-800 text-xs font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                 >
                   <Upload size={13} />
                   <span>{isUploading ? 'uploading...' : 'upload photo'}</span>
@@ -263,36 +207,11 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowUrlInput((prev) => !prev)}
-                  className="px-3 py-1.5 rounded-xl bg-transparent hover:bg-gray-800/40 text-xs font-medium text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer hover-jump-sm"
+                  className="px-3 py-1.5 rounded-xl bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/60 text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <ImageIcon size={13} />
                   <span>image url</span>
                 </button>
-              </div>
-
-              {/* Preset avatars selection */}
-              <div className="flex items-center gap-1.5 pt-1">
-                <span className="text-[11px] text-gray-400 mr-1">presets:</span>
-                {PRESET_AVATARS.map((preset) => (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => handleAvatarChange(preset.url)}
-                    title={preset.name}
-                    className={`w-6 h-6 rounded-full overflow-hidden ring-1 transition-all cursor-pointer hover-jump-sm ${
-                      avatarUrl === preset.url
-                        ? 'ring-2 ring-pink-500 scale-110'
-                        : 'ring-gray-700 opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img
-                      src={preset.url}
-                      alt={preset.name}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </button>
-                ))}
               </div>
             </div>
           </div>
@@ -302,9 +221,9 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
               <input
                 type="url"
                 value={avatarUrl}
-                onChange={(e) => handleAvatarChange(e.target.value)}
+                onChange={(e) => setAvatarUrl(e.target.value)}
                 placeholder="https://example.com/avatar.jpg"
-                className="w-full px-3 py-2 text-xs bg-[#161a22] border border-gray-800 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-hidden focus:border-pink-500"
+                className="w-full px-3 py-2 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-pink-500"
               />
             </div>
           )}
@@ -312,12 +231,9 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
 
         {/* Companion Name */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
-              companion name
-            </label>
-            <span className="text-[10px] text-pink-400 font-mono">updates live</span>
-          </div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            companion name
+          </label>
           <div className="relative">
             <User
               size={14}
@@ -326,23 +242,164 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
             <input
               type="text"
               value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g. niki, alice, eva"
               maxLength={32}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-[#161a22] border border-gray-800 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-hidden focus:border-pink-500"
+              className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-pink-500"
             />
           </div>
+        </div>
+
+        {/* Relationship & Boyfriend setting */}
+        <div className="space-y-2.5 p-3.5 rounded-2xl bg-gray-50 dark:bg-[#12161f] border border-gray-200/80 dark:border-gray-800/80">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Heart size={14} className="text-rose-500 fill-rose-500/20" />
+              <label className="text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                relationship & boyfriend
+              </label>
+            </div>
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+              {relationshipStatus === 'dating_user'
+                ? `dating @${userProfile?.username || 'you'}`
+                : relationshipStatus === 'custom'
+                ? `dating ${partnerName || 'custom'}`
+                : relationshipStatus === 'friends'
+                ? 'friends'
+                : 'single'}
+            </span>
+          </div>
+
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
+            Choose who she dates. You can set her boyfriend to be the profile talking right now, or customize who she or any companion you create is dating.
+          </p>
+
+          {/* Relationship mode choices */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-0.5">
+            <button
+              type="button"
+              onClick={() => setRelationshipStatus('dating_user')}
+              className={`px-2.5 py-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer border ${
+                relationshipStatus === 'dating_user'
+                  ? 'bg-rose-500/15 border-rose-500/60 text-rose-600 dark:text-rose-400 shadow-2xs font-semibold'
+                  : 'bg-white dark:bg-[#161a22] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700'
+              }`}
+            >
+              <Heart
+                size={14}
+                className={
+                  relationshipStatus === 'dating_user'
+                    ? 'fill-rose-500 text-rose-500'
+                    : ''
+                }
+              />
+              <span className="text-[11px]">date me</span>
+              <span className="text-[9px] opacity-70">
+                @{userProfile?.username || 'current'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRelationshipStatus('custom')}
+              className={`px-2.5 py-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer border ${
+                relationshipStatus === 'custom'
+                  ? 'bg-rose-500/15 border-rose-500/60 text-rose-600 dark:text-rose-400 shadow-2xs font-semibold'
+                  : 'bg-white dark:bg-[#161a22] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700'
+              }`}
+            >
+              <User size={14} />
+              <span className="text-[11px]">custom</span>
+              <span className="text-[9px] opacity-70">specific user</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRelationshipStatus('friends')}
+              className={`px-2.5 py-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer border ${
+                relationshipStatus === 'friends'
+                  ? 'bg-rose-500/15 border-rose-500/60 text-rose-600 dark:text-rose-400 shadow-2xs font-semibold'
+                  : 'bg-white dark:bg-[#161a22] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700'
+              }`}
+            >
+              <Users size={14} />
+              <span className="text-[11px]">friends</span>
+              <span className="text-[9px] opacity-70">platonic</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRelationshipStatus('single')}
+              className={`px-2.5 py-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer border ${
+                relationshipStatus === 'single'
+                  ? 'bg-rose-500/15 border-rose-500/60 text-rose-600 dark:text-rose-400 shadow-2xs font-semibold'
+                  : 'bg-white dark:bg-[#161a22] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700'
+              }`}
+            >
+              <Sparkles size={14} />
+              <span className="text-[11px]">single</span>
+              <span className="text-[9px] opacity-70">independent</span>
+            </button>
+          </div>
+
+          {/* Details & contextual options based on selected status */}
+          {relationshipStatus === 'dating_user' && (
+            <div className="mt-2 p-2.5 rounded-xl bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/25 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
+              <Heart
+                size={14}
+                className="shrink-0 mt-0.5 fill-rose-500 text-rose-500"
+              />
+              <div className="space-y-0.5">
+                <div className="font-semibold text-[11px] text-rose-600 dark:text-rose-300">
+                  Boyfriend: @{userProfile?.username || 'your profile'} (Profile talking right now)
+                </div>
+                <p className="text-[10px] text-gray-600 dark:text-gray-300 leading-relaxed">
+                  She will recognize you as her boyfriend, treating you with girlfriend affection, warmth, loyalty, and sweet romantic nicknames.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {relationshipStatus === 'custom' && (
+            <div className="mt-2 space-y-1">
+              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-300">
+                Partner / Boyfriend Username or Name
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={partnerName}
+                  onChange={(e) => setPartnerName(e.target.value)}
+                  placeholder="e.g. @misiori or @alex"
+                  className="w-full px-3 py-2 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-rose-500"
+                />
+              </div>
+              <p className="text-[10px] text-gray-400">
+                She will stay loyal to this specific partner. If that user talks to her, she treats them as her boyfriend.
+              </p>
+            </div>
+          )}
+
+          {relationshipStatus !== 'dating_user' && userProfile?.username && (
+            <button
+              type="button"
+              onClick={() => setRelationshipStatus('dating_user')}
+              className="w-full mt-1.5 py-1.5 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium border border-rose-500/20 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Heart size={12} className="fill-rose-500 text-rose-500" />
+              <span>Make my profile (@{userProfile.username}) her boyfriend</span>
+            </button>
+          )}
         </div>
 
         {/* Prompt / Instructions */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               personality prompt / instructions
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-400 font-mono">click save or ⌘+enter</span>
-              <span className="text-[10px] text-gray-500 font-mono">
+              <span className="text-[10px] text-gray-400 font-mono">
                 {prompt.length} chars
               </span>
             </div>
@@ -350,34 +407,34 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
 
           <textarea
             value={prompt}
-            onChange={(e) => handlePromptChange(e.target.value)}
+            onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
                 handleSubmit();
               }
             }}
-            rows={7}
-            placeholder="describe how your companion should speak, behave, their tone, opinions, or specific rules..."
-            className="w-full p-3 text-xs font-mono leading-relaxed bg-[#161a22] border border-gray-800 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-hidden focus:border-pink-500 resize-none"
+            rows={8}
+            placeholder="describe how your companion should speak, behave, tone, opinions, or specific rules..."
+            className="w-full p-3 text-xs font-mono leading-relaxed bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-pink-500 resize-none"
           />
 
           <p className="text-[11px] text-gray-400 flex items-center gap-1">
-            <HelpCircle size={12} />
+            <HelpCircle size={12} className="shrink-0" />
             <span>
-              instruct her vibe, humor, favorite topics, or language rules (&quot;без воды&quot;).
+              shortcut: press ⌘+enter or ctrl+enter to save anytime.
             </span>
           </p>
         </div>
 
         {/* Actions row */}
         <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-          {/* Roll back to Niki's prompt button */}
+          {/* Roll back button */}
           <button
             type="button"
             onClick={handleRollback}
-            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium text-gray-300 hover:text-white bg-gray-800/60 hover:bg-gray-800 transition-colors cursor-pointer hover-jump-sm"
-            title="Restore original Niki prompt and avatar"
+            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800/60 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            title="Restore original Niki defaults"
           >
             <RotateCcw size={13} />
             <span>roll back to niki</span>
@@ -386,7 +443,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
           {/* Save button */}
           <button
             type="submit"
-            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold shadow-xs transition-all active:scale-[0.99] cursor-pointer hover-jump-sm"
+            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold shadow-xs transition-all active:scale-[0.99] cursor-pointer"
           >
             <Check size={14} />
             <span>save personality</span>

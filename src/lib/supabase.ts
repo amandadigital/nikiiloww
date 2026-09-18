@@ -78,7 +78,7 @@ export async function signUpUser({
         username: cleanUsername,
         email: cleanEmail,
         avatar_url: '',
-        bio: 'Hey there! I am chatting with Nikilow.',
+        bio: '',
         updated_at: new Date().toISOString(),
       });
     } catch (e) {
@@ -183,6 +183,9 @@ export function parseCompanionPersonality(raw: any): CompanionPersonality | unde
         raw.companion_personality.avatarUrl ||
         raw.companion_personality.avatar_url ||
         '',
+      relationshipStatus:
+        raw.companion_personality.relationshipStatus || 'dating_user',
+      partnerName: raw.companion_personality.partnerName || '',
     };
   }
 
@@ -191,6 +194,8 @@ export function parseCompanionPersonality(raw: any): CompanionPersonality | unde
       name: raw.companion_name || 'nikilow',
       prompt: raw.companion_prompt || '',
       avatarUrl: raw.companion_avatar_url || '',
+      relationshipStatus: raw.companion_relationship_status || 'dating_user',
+      partnerName: raw.companion_partner_name || '',
     };
   }
 
@@ -868,10 +873,70 @@ export async function resendVerificationEmail(email: string) {
 }
 
 /**
+ * Fetch post IDs that a user has liked across all devices
+ */
+export async function fetchUserLikedPostIds(userId: string): Promise<string[]> {
+  if (!userId) return [];
+
+  // 1. Try server endpoint
+  try {
+    const res = await fetch(`/api/posts?action=likes&userId=${encodeURIComponent(userId)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.likedPostIds)) {
+        saveStoredUserLikes(data.likedPostIds);
+        try {
+          localStorage.setItem(`nikilow_user_likes_${userId}`, JSON.stringify(data.likedPostIds));
+        } catch {}
+        return data.likedPostIds;
+      }
+    }
+  } catch (apiErr) {
+    console.warn('fetchUserLikedPostIds API notice:', apiErr);
+  }
+
+  // 2. Direct Supabase query
+  try {
+    const { data, error } = await supabase
+      .from('post_likes')
+      .select('post_id')
+      .eq('user_id', userId);
+
+    if (!error && data) {
+      const ids = data.map((item: any) => item.post_id);
+      saveStoredUserLikes(ids);
+      try {
+        localStorage.setItem(`nikilow_user_likes_${userId}`, JSON.stringify(ids));
+      } catch {}
+      return ids;
+    }
+  } catch (err) {
+    console.warn('fetchUserLikedPostIds client notice:', err);
+  }
+
+  // 3. Fallback to cached likes
+  try {
+    const cached = localStorage.getItem(`nikilow_user_likes_${userId}`);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch {}
+
+  return getStoredUserLikes();
+}
+
+/**
  * Fetch all posts in reverse chronological order
  */
 export async function fetchFeedPosts(currentUserId?: string): Promise<Post[]> {
-  const userLikes = getStoredUserLikes();
+  let userLikes: string[] = [];
+  if (currentUserId) {
+    userLikes = await fetchUserLikedPostIds(currentUserId);
+  } else {
+    // Unregistered users have no likes
+    userLikes = [];
+  }
+
   let dbPostsList: Post[] = [];
 
   // 1. Try fetching from /api/posts endpoint (reliable serverless function)
@@ -1083,12 +1148,56 @@ export async function createFeedPost(
 }
 
 /**
- * Toggle like on a post
+ * Toggle like on a post (Enforces 1 like per account, syncing across all devices)
  */
 export async function togglePostLike(
   postId: string,
   userId?: string
 ): Promise<{ isLiked: boolean; newCount: number }> {
+  if (!userId) {
+    throw new Error('You must be logged in to like posts.');
+  }
+
+  // 1. Try server API endpoint (bypasses RLS issues via service role)
+  try {
+    const res = await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'toggle_like',
+        postId,
+        userId,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.success) {
+        // Update user likes cache
+        const currentLikes = getStoredUserLikes();
+        const nextLikes = data.isLiked
+          ? Array.from(new Set([...currentLikes, postId]))
+          : currentLikes.filter((id) => id !== postId);
+        saveStoredUserLikes(nextLikes);
+        try {
+          localStorage.setItem(`nikilow_user_likes_${userId}`, JSON.stringify(nextLikes));
+        } catch {}
+
+        // Update local posts cache
+        const localPosts = getStoredLocalPosts();
+        const updatedLocal = localPosts.map((p) =>
+          p.id === postId ? { ...p, likesCount: data.likesCount, isLiked: data.isLiked } : p
+        );
+        saveStoredLocalPosts(updatedLocal);
+
+        return { isLiked: data.isLiked, newCount: data.likesCount };
+      }
+    }
+  } catch (err) {
+    console.warn('togglePostLike API notice, attempting client fallback:', err);
+  }
+
+  // Fallback to direct client toggle
   const likes = getStoredUserLikes();
   const alreadyLiked = likes.includes(postId);
   const nextLiked = !alreadyLiked;
@@ -1100,6 +1209,9 @@ export async function togglePostLike(
     nextLikes = [...likes, postId];
   }
   saveStoredUserLikes(nextLikes);
+  try {
+    localStorage.setItem(`nikilow_user_likes_${userId}`, JSON.stringify(nextLikes));
+  } catch {}
 
   // Update local posts cache
   const localPosts = getStoredLocalPosts();
@@ -1114,25 +1226,23 @@ export async function togglePostLike(
   });
   saveStoredLocalPosts(updatedLocal);
 
-  // Try updating Supabase
+  // Try updating Supabase directly
   try {
-    if (userId && !postId.startsWith('seed_')) {
-      if (nextLiked) {
-        await supabase.from('post_likes').insert({
-          post_id: postId,
-          user_id: userId,
-        });
-        await supabase.rpc('increment_post_likes', { post_id_input: postId });
-      } else {
-        await supabase
-          .from('post_likes')
-          .delete()
-          .match({ post_id: postId, user_id: userId });
-        await supabase.rpc('decrement_post_likes', { post_id_input: postId });
-      }
+    if (nextLiked) {
+      await supabase.from('post_likes').upsert({
+        post_id: postId,
+        user_id: userId,
+      });
+      await supabase.rpc('increment_post_likes', { post_id_input: postId });
+    } else {
+      await supabase
+        .from('post_likes')
+        .delete()
+        .match({ post_id: postId, user_id: userId });
+      await supabase.rpc('decrement_post_likes', { post_id_input: postId });
     }
   } catch (err) {
-    console.warn('togglePostLike remote skipped:', err);
+    console.warn('togglePostLike remote client notice:', err);
   }
 
   return { isLiked: nextLiked, newCount: calculatedCount };
@@ -1205,7 +1315,7 @@ export async function fetchProfileByUsername(
           username: 'kodewt',
           email: data.email || 'kodewt@developer.com',
           avatar_url: data.avatar_url || '',
-          bio: data.bio || 'developer & designer.',
+          bio: data.bio || '',
           is_verified: true,
         };
       }
@@ -1219,7 +1329,7 @@ export async function fetchProfileByUsername(
       username: 'kodewt',
       email: 'kodewt@developer.com',
       avatar_url: '',
-      bio: 'building things with heart.',
+      bio: '',
       is_verified: true,
     };
   }
@@ -1238,7 +1348,7 @@ export async function fetchProfileByUsername(
         username: data.username,
         email: data.email || '',
         avatar_url: data.avatar_url || '',
-        bio: data.bio || 'Hey there! I am using Nikilow.',
+        bio: data.bio || '',
         is_verified: cleanUsername === 'kodewt' || data.is_verified,
       };
     }
@@ -1253,7 +1363,7 @@ export async function fetchProfileByUsername(
     username: cleanUsername,
     email: `${cleanUsername}@user.net`,
     avatar_url: '',
-    bio: `@${cleanUsername} is on Nikilow.`,
+    bio: '',
     is_verified: cleanUsername === 'kodewt',
   };
 }

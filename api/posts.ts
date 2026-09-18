@@ -10,8 +10,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     url.includes("/delete") ||
     req.body?.action === "delete";
 
+  const isToggleLikeAction =
+    req.method === "POST" &&
+    (subpath === "like" ||
+      url.includes("/like") ||
+      req.body?.action === "toggle_like" ||
+      req.body?.action === "like");
+
   const isCreateAction =
-    req.method === "POST" && !isDeleteAction;
+    req.method === "POST" && !isDeleteAction && !isToggleLikeAction;
 
   // 1. DELETE POST
   if (isDeleteAction) {
@@ -46,6 +53,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const error = err as Error;
       console.error("Delete post handler exception:", error);
       res.status(500).json({ error: error.message || "Server error deleting post" });
+      return;
+    }
+  }
+
+  // 2. TOGGLE LIKE ON POST (Enforces one like per user account across all devices)
+  if (isToggleLikeAction) {
+    try {
+      const postId =
+        req.body?.postId ||
+        req.body?.id ||
+        (req.query.postId as string);
+      const userId = req.body?.userId || (req.query.userId as string);
+
+      if (!postId || !userId) {
+        res.status(400).json({ error: "postId and userId are required to like a post" });
+        return;
+      }
+
+      // Check if user already liked this post
+      const { data: existingLike } = await supabaseAdmin
+        .from("post_likes")
+        .select("post_id")
+        .eq("post_id", postId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      let isLiked = false;
+      if (existingLike) {
+        // Unlike post
+        await supabaseAdmin
+          .from("post_likes")
+          .delete()
+          .eq("post_id", postId)
+          .eq("user_id", userId);
+        isLiked = false;
+      } else {
+        // Like post (unique primary key ensures one like per account)
+        await supabaseAdmin
+          .from("post_likes")
+          .insert({ post_id: postId, user_id: userId });
+        isLiked = true;
+      }
+
+      // Compute exact real likes count from the post_likes table
+      const { count } = await supabaseAdmin
+        .from("post_likes")
+        .select("post_id", { count: "exact", head: true })
+        .eq("post_id", postId);
+
+      const realLikesCount = typeof count === "number" ? count : (isLiked ? 1 : 0);
+
+      // Keep posts.likes_count cached in the posts table
+      await supabaseAdmin
+        .from("posts")
+        .update({ likes_count: realLikesCount })
+        .eq("id", postId);
+
+      res.status(200).json({
+        success: true,
+        isLiked,
+        likesCount: realLikesCount,
+      });
+      return;
+    } catch (err) {
+      const error = err as Error;
+      console.error("Toggle like handler exception:", error);
+      res.status(500).json({ error: error.message || "Server error toggling like" });
       return;
     }
   }
@@ -126,9 +200,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // 3. GET POSTS (GET)
+  // 3. GET POSTS OR LIKES (GET)
   if (req.method === "GET") {
     try {
+      const action = (req.query.action as string) || subpath;
+      const userId = (req.query.userId as string) || "";
+
+      // Fetch user's liked post IDs
+      if (action === "likes" || req.query.likes === "true") {
+        if (!userId) {
+          res.status(200).json({ success: true, likedPostIds: [] });
+          return;
+        }
+
+        const { data: likesData, error: likesError } = await supabaseAdmin
+          .from("post_likes")
+          .select("post_id")
+          .eq("user_id", userId);
+
+        if (likesError) {
+          console.warn("Failed to fetch user likes via supabaseAdmin:", likesError);
+          res.status(200).json({ success: true, likedPostIds: [] });
+          return;
+        }
+
+        const likedPostIds = (likesData || []).map((l: any) => l.post_id);
+        res.status(200).json({ success: true, likedPostIds });
+        return;
+      }
+
       let dbPosts: any[] | null = null;
 
       // Try fetching with profiles relationship join so username changes are immediately reflected

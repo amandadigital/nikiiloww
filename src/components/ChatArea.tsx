@@ -13,6 +13,7 @@ import {
   Sparkles,
   RefreshCw,
   Menu,
+  Heart,
 } from 'lucide-react';
 import {
   Message,
@@ -40,6 +41,7 @@ interface ChatAreaProps {
   wallpaperSettings?: ChatWallpaperSettings;
   onOpenVisualisation?: () => void;
   accentColor?: AccentColor;
+  onRetry?: () => void;
 }
 
 export const ChatArea: FC<ChatAreaProps> = ({
@@ -57,6 +59,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
   wallpaperSettings,
   onOpenVisualisation,
   accentColor = 'rose',
+  onRetry,
 }) => {
   const [inputText, setInputText] = useState('');
   const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -64,23 +67,31 @@ export const ChatArea: FC<ChatAreaProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isMisiori =
-    userProfile &&
-    (userProfile.username.toLowerCase() === 'misiori' ||
-      userProfile.username.toLowerCase() === 'kodewt' ||
-      userProfile.name.toLowerCase().includes('misiori'));
+  const rawUser = userProfile?.username?.trim().replace(/^@+/, '').toLowerCase() || '';
+  const rawName = userProfile?.name?.trim().toLowerCase() || '';
+
+  const isDatingThisUser = Boolean(
+    personality.relationshipStatus === 'dating_user' ||
+    (personality.relationshipStatus === 'custom' &&
+      personality.partnerName &&
+      (rawUser === personality.partnerName.trim().replace(/^@+/, '').toLowerCase() ||
+        rawName === personality.partnerName.trim().toLowerCase())) ||
+    (!personality.relationshipStatus &&
+      userProfile &&
+      (rawUser === 'misiori' || rawUser === 'kodewt' || rawName.includes('misiori')))
+  );
 
   const companionName = personality.name || 'niki';
   const companionAvatar = personality.avatarUrl || DEFAULT_NIKILOW_AVATAR;
   const accentCfg = ACCENT_CONFIG[accentColor] || ACCENT_CONFIG.rose;
 
-  const starters = isMisiori
+  const starters = isDatingThisUser
     ? [
-        `hey ${companionName.toLowerCase()}, missed you today.`,
+        `hey ${companionName.toLowerCase()}, missed you today ❤️`,
         'what are you thinking about right now?',
         'tell me what you did today.',
-        'how is naisuru looking to you?',
         'tell me something sweet.',
+        'what do you love most about us?',
       ]
     : [
         "what's on your mind today?",
@@ -277,11 +288,13 @@ export const ChatArea: FC<ChatAreaProps> = ({
 
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight mb-1.5 flex items-center justify-center gap-1.5">
               <span>
-                {isMisiori && (companionName.toLowerCase() === 'niki' || companionName.toLowerCase() === 'nikilow')
-                  ? 'hey misiori'
+                {isDatingThisUser
+                  ? `hey ${userProfile?.name || userProfile?.username || 'babe'}`
                   : `hey, i'm ${companionName.toLowerCase()}.`}
               </span>
-              {isMisiori && (companionName.toLowerCase() === 'niki' || companionName.toLowerCase() === 'nikilow') && (
+              {isDatingThisUser ? (
+                <Heart size={16} className="text-rose-500 fill-rose-500 shrink-0" />
+              ) : (
                 <VerifiedBadge size="md" />
               )}
             </h2>
@@ -317,6 +330,8 @@ export const ChatArea: FC<ChatAreaProps> = ({
                   key={message.id || index}
                   message={message}
                   isStreaming={isLast && isStreaming && message.role === 'assistant'}
+                  isLastAssistant={isLast && message.role === 'assistant'}
+                  onRetry={onRetry}
                   userAvatar={userProfile?.avatar_url}
                   userName={userProfile?.name}
                   userUsername={userProfile?.username}

@@ -94,35 +94,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         profiles[userId] = updated;
         writeStoredProfiles(profiles);
 
-        // Synchronize to Supabase profiles table in background
-        (async () => {
-          try {
-            const headers: Record<string, string> = {
-              apikey: SUPABASE_ANON_KEY,
-              "Content-Type": "application/json",
-              Authorization: authToken
-                ? `Bearer ${authToken}`
-                : `Bearer ${SUPABASE_ANON_KEY}`,
-              Prefer: "return=representation",
-            };
-
-            const payload: Record<string, any> = {
+        // Synchronize to Supabase profiles table via supabaseAdmin (service role)
+        try {
+          await supabaseAdmin
+            .from("profiles")
+            .update({
               companion_name: personality.name,
               companion_prompt: personality.prompt,
               companion_avatar_url: personality.avatarUrl,
               companion_personality: personality,
               updated_at: new Date().toISOString(),
-            };
-
-            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
-              method: "PATCH",
-              headers,
-              body: JSON.stringify(payload),
-            }).catch(() => {});
-          } catch (e) {
-            console.warn("Background Supabase personality sync notice:", e);
-          }
-        })();
+            })
+            .eq("id", userId);
+        } catch (adminErr) {
+          console.warn("supabaseAdmin profiles table personality update notice:", adminErr);
+        }
 
         res.status(200).json({ success: true, personality, profile: updated });
         return;

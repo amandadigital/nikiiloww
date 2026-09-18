@@ -495,7 +495,7 @@ export default function App() {
             email: 'misiori@naisuru.app',
             avatar_url:
               'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-            bio: "creator of naisuru • building whatever u want with a prompt",
+            bio: '',
             is_verified: true,
             created_at: new Date(Date.now() - 86400000 * 60).toISOString(),
             updated_at: new Date().toISOString(),
@@ -528,7 +528,7 @@ export default function App() {
         username: clean,
         email: `${clean}@community.local`,
         avatar_url: matchingPost?.authorAvatar || '',
-        bio: `member of the naisuru community.`,
+        bio: '',
         is_verified: clean === 'kodewt',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -615,8 +615,13 @@ export default function App() {
     }
   };
 
-  // Like post handler - instant toggle
+  // Like post handler - unregistered users cannot like and are forced to log in
   const handleLikePost = async (postId: string) => {
+    if (!userProfile) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     const post = posts.find((p) => p.id === postId);
     if (!post) return;
 
@@ -635,7 +640,16 @@ export default function App() {
     );
 
     try {
-      await togglePostLike(postId, userProfile?.id);
+      const result = await togglePostLike(postId, userProfile.id);
+      if (result && typeof result.newCount === 'number') {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, isLiked: result.isLiked, likesCount: result.newCount }
+              : p
+          )
+        );
+      }
     } catch (err) {
       console.warn('togglePostLike error:', err);
     }
@@ -750,10 +764,11 @@ export default function App() {
       createdAt: Date.now(),
     };
 
-    // Grab current messages before state update for history
+    // Keep the most recent 20 messages for high-speed prompt processing and memory continuity
     const existingMessages = activeSession.messages || [];
+    const recentHistory = existingMessages.slice(-20);
     const conversationHistory = [
-      ...existingMessages.map((m) => ({
+      ...recentHistory.map((m) => ({
         role: m.role,
         content: m.content,
       })),
@@ -807,15 +822,14 @@ export default function App() {
       });
     }
 
-    // Build comprehensive cross-chat memory so companion remembers everything across sessions
+    // Build concise cross-chat context so companion retains long-term memory without token bloat
     const otherSessions = sessions.filter((s) => s.id !== currentSessionId);
     const crossChatNotes: string[] = [];
-    for (const s of otherSessions) {
+    for (const s of otherSessions.slice(0, 5)) {
       if (s.messages.length > 0) {
-        // Collect conversation context (user questions & companion answers)
-        const exchanges = s.messages.slice(-6).map((m) => {
+        const exchanges = s.messages.slice(-4).map((m) => {
           const roleLabel = m.role === 'user' ? 'User' : (personality?.name || 'Nikilow');
-          return `${roleLabel}: ${m.content.trim().slice(0, 180)}`;
+          return `${roleLabel}: ${m.content.trim().slice(0, 120)}`;
         });
         if (exchanges.length > 0) {
           crossChatNotes.push(
@@ -824,26 +838,42 @@ export default function App() {
         }
       }
     }
-    const crossChatContext = crossChatNotes.slice(0, 15).join('\n\n');
+    const crossChatContext = crossChatNotes.slice(0, 5).join('\n\n');
+
+    // Extract community usernames from loaded posts so companion recognizes anybody on the platform
+    const communityUsernames = Array.from(
+      new Set(
+        posts
+          .map((p) => p.authorUsername?.trim())
+          .filter((u): u is string => Boolean(u && u.length > 0))
+      )
+    );
 
     setIsStreaming(true);
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
     try {
+      const requestPayload = {
+        messages: conversationHistory,
+        userProfile: userProfile
+          ? {
+              name: userProfile.name,
+              username: userProfile.username,
+              bio: userProfile.bio,
+            }
+          : { name: 'Friend', username: 'guest' },
+        crossChatContext: crossChatContext || undefined,
+        customPersonality: personality,
+        communityUsernames,
+      };
+
       let response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messages: conversationHistory,
-          userProfile: userProfile
-            ? { name: userProfile.name, username: userProfile.username }
-            : undefined,
-          crossChatContext: crossChatContext || undefined,
-          customPersonality: personality,
-        }),
+        body: JSON.stringify(requestPayload),
         signal: abortController.signal,
       });
 
@@ -854,14 +884,7 @@ export default function App() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            messages: conversationHistory,
-            userProfile: userProfile
-              ? { name: userProfile.name, username: userProfile.username }
-              : undefined,
-            crossChatContext: crossChatContext || undefined,
-            customPersonality: personality,
-          }),
+          body: JSON.stringify(requestPayload),
           signal: abortController.signal,
         });
       }
@@ -972,7 +995,7 @@ export default function App() {
                         ...m,
                         content:
                           m.content ||
-                          "I got lost in thought for a second. Could you say that again?",
+                          "I had a quick connection glitch for a moment. Tap retry or send your message again.",
                       }
                     : m
                 ),
@@ -992,6 +1015,46 @@ export default function App() {
         return prev;
       });
     }
+  };
+
+  // Quick retry handler for last message
+  const handleRetry = () => {
+    if (isStreaming) return;
+    const msgs = activeSession.messages;
+    if (msgs.length === 0) return;
+
+    let lastUserText = '';
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user') {
+        lastUserText = msgs[i].content;
+        break;
+      }
+    }
+    if (!lastUserText) return;
+
+    // Remove the trailing assistant message that failed or glitched
+    setSessions((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id === activeSession.id) {
+          const lastM = s.messages[s.messages.length - 1];
+          const newMsgs =
+            lastM && lastM.role === 'assistant'
+              ? s.messages.slice(0, -1)
+              : s.messages;
+          return {
+            ...s,
+            messages: newMsgs,
+          };
+        }
+        return s;
+      });
+      saveSessions(updated);
+      return updated;
+    });
+
+    setTimeout(() => {
+      handleSendMessage(lastUserText);
+    }, 40);
   };
 
   // Render Admin Moderation Portal if path is /admin
@@ -1118,6 +1181,7 @@ export default function App() {
                 wallpaperSettings={wallpaperSettings}
                 onOpenVisualisation={() => setIsVisualisationOpen(true)}
                 accentColor={accentColor}
+                onRetry={handleRetry}
               />
             )}
 

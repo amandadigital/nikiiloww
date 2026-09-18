@@ -59,15 +59,25 @@ export const DEFAULT_NIKILOW_PROMPT = `TALK REALISTICALLY AND WITHOUT WATER ("Б
 - Language matching: If the user writes in Russian, reply in natural lowercase Russian (живой разговорный язык без воды). If they speak English, speak natural lowercase English. Match any language effortlessly.
 - Never say robotic phrases like "how can i assist you today?" or "i'm here to help". Just be yourself.`;
 
+export type RelationshipStatus =
+  | 'dating_user' // Dating whoever is talking right now (boyfriend/partner)
+  | 'custom'      // Dating a specific username or person
+  | 'single'      // Single / independent
+  | 'friends';    // Best friends / platonic
+
 export interface CompanionPersonality {
   name: string;
   prompt: string;
   avatarUrl: string;
+  relationshipStatus?: RelationshipStatus;
+  partnerName?: string; // Optional custom username or name when relationshipStatus is 'custom'
 }
 
 export const DEFAULT_NIKILOW_PERSONALITY: CompanionPersonality = {
   name: DEFAULT_NIKILOW_NAME,
   prompt: DEFAULT_NIKILOW_PROMPT,
   avatarUrl: DEFAULT_NIKILOW_AVATAR,
+  relationshipStatus: 'dating_user',
+  partnerName: '',
 };
 

@@ -72,13 +72,6 @@ export const FeedView: FC<FeedViewProps> = ({
 
     const userMap = new Map<string, { username: string; name: string; avatar?: string; isVerified?: boolean }>();
 
-    // Add known users
-    userMap.set('kodewt', {
-      username: 'kodewt',
-      name: 'kodewt',
-      isVerified: true,
-    });
-
     if (userProfile) {
       userMap.set(userProfile.username.toLowerCase(), {
         username: userProfile.username.toLowerCase(),

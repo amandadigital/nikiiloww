@@ -1,6 +1,6 @@
 import { FC, useState } from 'react';
 import { motion } from 'motion/react';
-import { Copy, Check, User } from 'lucide-react';
+import { Copy, Check, User, RefreshCw } from 'lucide-react';
 import { Message, DEFAULT_NIKILOW_AVATAR } from '../types';
 import { renderMentions } from '../utils/mentions';
 import { VerifiedBadge } from './VerifiedBadge';
@@ -8,6 +8,8 @@ import { VerifiedBadge } from './VerifiedBadge';
 interface MessageItemProps {
   message: Message;
   isStreaming?: boolean;
+  isLastAssistant?: boolean;
+  onRetry?: () => void;
   userAvatar?: string;
   userName?: string;
   userUsername?: string;
@@ -19,6 +21,8 @@ interface MessageItemProps {
 export const MessageItem: FC<MessageItemProps> = ({
   message,
   isStreaming,
+  isLastAssistant,
+  onRetry,
   userAvatar,
   userName,
   userUsername,
@@ -47,6 +51,13 @@ export const MessageItem: FC<MessageItemProps> = ({
 
   const resolvedCompanionAvatar = companionAvatar || DEFAULT_NIKILOW_AVATAR;
   const resolvedCompanionName = companionName || 'nikilow';
+  const hasErrorIndication =
+    !isUser &&
+    (message.content.includes('glitch') ||
+      message.content.includes('error') ||
+      message.content.includes('notice') ||
+      message.content.includes('limit') ||
+      message.content.includes('expired'));
 
   return (
     <motion.div
@@ -100,11 +111,13 @@ export const MessageItem: FC<MessageItemProps> = ({
           )}
         </div>
 
-        {/* Footer meta: timestamp and copy button */}
+        {/* Footer meta: timestamp, copy button, and retry action */}
         <div
-          className={`flex items-center gap-2 mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-gray-400 dark:text-gray-500 ${
-            isUser ? 'flex-row-reverse' : 'flex-row'
-          }`}
+          className={`flex items-center gap-2 mt-1 px-1 transition-opacity text-[10px] text-gray-400 dark:text-gray-500 ${
+            hasErrorIndication
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-100'
+          } ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
         >
           <span className="font-mono">{formattedTime}</span>
           <button
@@ -114,6 +127,16 @@ export const MessageItem: FC<MessageItemProps> = ({
           >
             {copied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
           </button>
+          {isLastAssistant && !isStreaming && onRetry && (
+            <button
+              onClick={onRetry}
+              className="p-0.5 rounded hover:text-rose-500 dark:hover:text-rose-400 text-gray-400 dark:text-gray-500 transition-colors flex items-center gap-1 cursor-pointer"
+              title="Retry / regenerate response"
+            >
+              <RefreshCw size={10} />
+              <span className="text-[10px]">retry</span>
+            </button>
+          )}
         </div>
       </div>
 

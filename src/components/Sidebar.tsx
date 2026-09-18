@@ -12,6 +12,7 @@ import {
   User,
   LogIn,
   Palette,
+  Heart,
 } from 'lucide-react';
 import {
   ChatSession,
@@ -102,6 +103,20 @@ export const Sidebar: FC<SidebarProps> = ({
     return titleMatch || messageMatch;
   });
 
+  const rawUser = userProfile?.username?.trim().replace(/^@+/, '').toLowerCase() || '';
+  const rawName = userProfile?.name?.trim().toLowerCase() || '';
+
+  const isDatingThisUser = Boolean(
+    personality.relationshipStatus === 'dating_user' ||
+    (personality.relationshipStatus === 'custom' &&
+      personality.partnerName &&
+      (rawUser === personality.partnerName.trim().replace(/^@+/, '').toLowerCase() ||
+        rawName === personality.partnerName.trim().toLowerCase())) ||
+    (!personality.relationshipStatus &&
+      userProfile &&
+      (rawUser === 'misiori' || rawUser === 'kodewt' || rawName.includes('misiori')))
+  );
+
   const isMisiori =
     userProfile &&
     (userProfile.username.toLowerCase() === 'misiori' ||
@@ -133,9 +148,25 @@ export const Sidebar: FC<SidebarProps> = ({
                 <VerifiedBadge size="sm" />
               )}
             </div>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-              companion
-            </span>
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-1">
+              {isDatingThisUser ? (
+                <span className="text-rose-500 flex items-center gap-1 font-medium">
+                  <Heart size={10} className="fill-rose-500 text-rose-500 shrink-0" />
+                  dating @{userProfile?.username || 'you'}
+                </span>
+              ) : personality.relationshipStatus === 'custom' && personality.partnerName ? (
+                <span className="text-rose-500 flex items-center gap-1 font-medium">
+                  <Heart size={10} className="fill-rose-500 text-rose-500 shrink-0" />
+                  dating {personality.partnerName}
+                </span>
+              ) : personality.relationshipStatus === 'friends' ? (
+                <span>best friends</span>
+              ) : personality.relationshipStatus === 'single' ? (
+                <span>single</span>
+              ) : (
+                <span>companion</span>
+              )}
+            </div>
           </div>
         </div>
 

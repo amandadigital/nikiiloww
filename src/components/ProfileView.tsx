@@ -236,10 +236,12 @@ export const ProfileView: FC<ProfileViewProps> = ({
                 @{profile.username}
               </p>
 
-              {/* Bio */}
-              <p className="text-xs text-gray-600 dark:text-gray-300 mt-2.5 leading-relaxed whitespace-pre-wrap max-w-md mx-auto text-center">
-                {profile.bio || 'no bio yet.'}
-              </p>
+              {/* Bio: only show if user has a bio */}
+              {profile.bio && profile.bio.trim() ? (
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-2.5 leading-relaxed whitespace-pre-wrap max-w-md mx-auto text-center">
+                  {profile.bio.trim()}
+                </p>
+              ) : null}
 
               {/* Status badges */}
               {isVerified && (

@@ -28,59 +28,34 @@ export const SearchView: FC<SearchViewProps> = ({
 }) => {
   const [query, setQuery] = useState('');
 
-  // Curated and dynamic user directory
+  // Dynamic user directory built strictly from real data: posts and current profile (no fake presets)
   const directory: CommunityUser[] = useMemo(() => {
-    const list: CommunityUser[] = [
-      {
-        id: 'user_misiori',
-        name: 'misiori',
-        username: 'misiori',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-        bio: 'creator of naisuru • building whatever u want with a prompt',
-        is_verified: true,
-        posts_count: posts.filter((p) => p.authorUsername.toLowerCase() === 'misiori').length || 12,
-      },
-      {
-        id: 'user_niki',
-        name: 'niki',
-        username: 'niki',
-        avatar_url: 'https://i.pinimg.com/736x/a1/8f/50/a18f5016507bf9e3ea6bda97da769913.jpg',
-        bio: 'your thoughtful, aesthetic companion. talking to @misiori',
-        is_verified: true,
-        posts_count: posts.filter((p) => p.authorUsername.toLowerCase() === 'niki' || p.authorUsername.toLowerCase() === 'nikilow').length || 24,
-      },
-      {
-        id: 'user_luna',
-        name: 'luna',
-        username: 'luna_art',
-        avatar_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&auto=format&fit=crop&q=80',
-        bio: 'visual artist & prompt engineer. creating dreamy atmospheres',
-        is_verified: false,
-        posts_count: posts.filter((p) => p.authorUsername.toLowerCase() === 'luna_art').length || 5,
-      },
-      {
-        id: 'user_rei',
-        name: 'rei',
-        username: 'rei_synth',
-        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-        bio: 'lo-fi melodies, twilight coffee, and neural stories',
-        is_verified: false,
-        posts_count: posts.filter((p) => p.authorUsername.toLowerCase() === 'rei_synth').length || 8,
-      },
-      {
-        id: 'user_zen',
-        name: 'zen',
-        username: 'zen_walk',
-        avatar_url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=300&auto=format&fit=crop&q=80',
-        bio: 'minimalism, poetry, and quiet moments in the rain',
-        is_verified: false,
-        posts_count: posts.filter((p) => p.authorUsername.toLowerCase() === 'zen_walk').length || 3,
-      },
-    ];
+    const list: CommunityUser[] = [];
 
-    // Add authors from feed posts if not already present
+    // Add current user if available
+    if (currentUserProfile) {
+      const currentClean = currentUserProfile.username.replace('@', '').trim().toLowerCase();
+      if (currentClean) {
+        list.push({
+          id: currentUserProfile.id,
+          name: currentUserProfile.name,
+          username: currentClean,
+          avatar_url:
+            currentUserProfile.avatar_url ||
+            `https://api.dicebear.com/7.x/identicon/svg?seed=${currentClean}`,
+          bio: currentUserProfile.bio || '',
+          is_verified: Boolean(currentUserProfile.is_verified),
+          posts_count: posts.filter(
+            (item) => item.authorUsername.replace('@', '').trim().toLowerCase() === currentClean
+          ).length,
+        });
+      }
+    }
+
+    // Add actual authors from real feed posts if not already present
     posts.forEach((p) => {
-      const cleanUser = p.authorUsername.replace('@', '').toLowerCase();
+      const cleanUser = p.authorUsername.replace('@', '').trim().toLowerCase();
+      if (!cleanUser) return;
       if (!list.some((u) => u.username.toLowerCase() === cleanUser)) {
         list.push({
           id: `post_user_${cleanUser}`,
@@ -89,33 +64,14 @@ export const SearchView: FC<SearchViewProps> = ({
           avatar_url:
             p.authorAvatar ||
             `https://api.dicebear.com/7.x/identicon/svg?seed=${cleanUser}`,
-          bio: 'community member on naisuru',
-          is_verified: p.isVerified || cleanUser === 'misiori',
+          bio: '',
+          is_verified: Boolean(p.isVerified),
           posts_count: posts.filter(
-            (item) => item.authorUsername.replace('@', '').toLowerCase() === cleanUser
+            (item) => item.authorUsername.replace('@', '').trim().toLowerCase() === cleanUser
           ).length,
         });
       }
     });
-
-    // Add current user if available
-    if (currentUserProfile) {
-      const currentClean = currentUserProfile.username.replace('@', '').toLowerCase();
-      if (!list.some((u) => u.username.toLowerCase() === currentClean)) {
-        list.push({
-          id: currentUserProfile.id,
-          name: currentUserProfile.name,
-          username: currentClean,
-          avatar_url:
-            currentUserProfile.avatar_url ||
-            `https://api.dicebear.com/7.x/identicon/svg?seed=${currentClean}`,
-          bio: currentUserProfile.bio || 'naisuru member',
-          is_verified:
-            currentUserProfile.is_verified || currentClean === 'misiori',
-          posts_count: 0,
-        });
-      }
-    }
 
     return list;
   }, [posts, currentUserProfile]);
@@ -123,12 +79,12 @@ export const SearchView: FC<SearchViewProps> = ({
   // Filter based on query
   const filteredUsers = useMemo(() => {
     const q = query.trim().toLowerCase().replace('@', '');
-    if (!q) return directory;
+    if (!q) return [];
     return directory.filter(
       (u) =>
         u.username.toLowerCase().includes(q) ||
         u.name.toLowerCase().includes(q) ||
-        u.bio.toLowerCase().includes(q)
+        (u.bio && u.bio.toLowerCase().includes(q))
     );
   }, [directory, query]);
 
@@ -178,11 +134,6 @@ export const SearchView: FC<SearchViewProps> = ({
               </div>
             ) : (
               filteredUsers.map((user) => {
-                const isMisiori = user.username.toLowerCase() === 'misiori';
-                const isNiki =
-                  user.username.toLowerCase() === 'niki' ||
-                  user.username.toLowerCase() === 'nikilow';
-
                 return (
                   <div
                     key={user.id}
@@ -212,32 +163,17 @@ export const SearchView: FC<SearchViewProps> = ({
                           <span className="text-[11px] text-gray-400 font-mono">
                             @{user.username}
                           </span>
-                          {isMisiori && <VerifiedBadge size="sm" />}
-                          {isNiki && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-pink-500/10 text-pink-500 border border-pink-500/20">
-                              companion
-                            </span>
-                          )}
+                          {user.is_verified && <VerifiedBadge size="sm" />}
                         </div>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-xs mt-0.5">
-                          {user.bio}
-                        </p>
+                        {user.bio && user.bio.trim() ? (
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-xs mt-0.5">
+                            {user.bio.trim()}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 pl-2">
-                      {isNiki && onOpenChatWithCompanion && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenChatWithCompanion();
-                          }}
-                          className="p-2 rounded-xl text-pink-500 hover:bg-pink-500/10 transition cursor-pointer"
-                          title="chat with niki"
-                        >
-                          <MessageSquare size={15} />
-                        </button>
-                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

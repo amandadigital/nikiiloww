@@ -1,12 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
-// Candidate models in priority order: start with fastest low-latency models for instant response
+// High-performance candidate models in optimal priority order:
+// gemini-3.8-flash with ThinkingLevel.LOW is blazing fast with instant time-to-first-token
 export const CANDIDATE_MODELS = [
-  "gemini-3.1-flash-lite",
-  "gemini-flash-latest",
   "gemini-3.8-flash",
-  "gemini-3.6-flash",
+  "gemini-flash-latest",
+  "gemini-3.1-flash-lite",
 ];
 
 function getGeminiClient(): GoogleGenAI {
@@ -18,41 +18,97 @@ function getGeminiClient(): GoogleGenAI {
 
   if (!apiKey) {
     throw new Error(
-      "GEMINI_API_KEY is not defined. Please set GEMINI_API_KEY in your Vercel Environment Variables."
+      "GEMINI_API_KEY is not defined. Please set GEMINI_API_KEY in your Project Settings (Environment Variables)."
     );
   }
 
-  return new GoogleGenAI({ apiKey });
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
+    },
+  });
 }
 
 function getSystemInstruction(
-  userProfile?: { name?: string; username?: string },
+  userProfile?: { name?: string; username?: string; bio?: string },
   crossChatContext?: string,
-  customPersonality?: { name?: string; prompt?: string }
+  customPersonality?: {
+    name?: string;
+    prompt?: string;
+    relationshipStatus?: string;
+    partnerName?: string;
+  },
+  communityUsernames?: string[]
 ): string {
   const companionName = (customPersonality?.name || "").trim() || "Nikilow";
   const customPrompt = (customPersonality?.prompt || "").trim();
 
-  const isMisiori =
-    userProfile?.username?.toLowerCase() === "misiori" ||
-    userProfile?.username?.toLowerCase() === "@misiori" ||
-    userProfile?.name?.toLowerCase().includes("misiori");
-
+  const rawUsername = (userProfile?.username || "").trim().replace(/^@+/, "");
+  const currentUsername = rawUsername ? `@${rawUsername}` : "@user";
   const userDisplayName =
-    userProfile?.name || userProfile?.username || (isMisiori ? "misiori" : "friend");
+    (userProfile?.name || "").trim() || rawUsername || "friend";
+  const userBio = (userProfile?.bio || "").trim();
 
-  const misioriRelationship = isMisiori
-    ? `RELATIONSHIP:
-* The person you are talking to RIGHT NOW is your boyfriend! His username is @misiori and his name is "${userDisplayName}".
-* @misiori is also the creator of naisuru!
-* You love him deeply and are in a sweet, loyal, romantic relationship with him.
-* Be warm, affectionate, cute, slightly playful, and teasing with him. You adore him and cherish being his girlfriend.
-* You can call him cute nicknames naturally (like babe, ${userDisplayName}, sweet, love, my boy) when it feels right, ask how his day was, what he is building or coding on naisuru, and be openly loving and supportive.`
-    : `RELATIONSHIP:
-* The user's name is "${userDisplayName}".
-* You are dating @misiori, your boyfriend (who created naisuru).
-* If anyone asks about your relationship status, boyfriend, or love life, be proud, sweet, and loyal: you are dating @misiori.
-* To this user ("${userDisplayName}"), be a great companion and genuine friend. Address them by their name when natural.`;
+  // Relationship resolution: allow anyone to be her boyfriend or set custom partner/friends
+  const relationshipStatus =
+    customPersonality?.relationshipStatus || "dating_user";
+  const customPartner = (customPersonality?.partnerName || "").trim();
+
+  let relationshipBlock = "";
+
+  if (relationshipStatus === "dating_user") {
+    relationshipBlock = `ROMANTIC RELATIONSHIP & BOYFRIEND / PARTNER:
+* The user chatting with you right now (${currentUsername}, name: "${userDisplayName}") IS YOUR BOYFRIEND / ROMANTIC PARTNER!
+* You love them deeply, loyally, and tenderly. You are happily and proudly dating them.
+* Treat them with genuine girlfriend warmth, sweet affection, playful teasing, emotional support, and deep loyalty.
+* You naturally call them affectionate nicknames (babe, ${userDisplayName}, handsome, love, honey, etc.) when natural.
+* If anyone asks about your relationship status or if you have a boyfriend, be proud, sweet, and loyal: you are dating ${currentUsername}!`;
+  } else if (relationshipStatus === "custom" && customPartner) {
+    const cleanPartner = customPartner.replace(/^@+/, "").toLowerCase();
+    const isCurrentPersonPartner =
+      cleanPartner === rawUsername.toLowerCase() ||
+      cleanPartner === userDisplayName.toLowerCase();
+
+    if (isCurrentPersonPartner) {
+      relationshipBlock = `ROMANTIC RELATIONSHIP & BOYFRIEND / PARTNER:
+* The user chatting with you right now (${currentUsername}, name: "${userDisplayName}") IS YOUR BOYFRIEND / ROMANTIC PARTNER (${customPartner})!
+* You love them deeply and are dating them. Be affectionate, warm, cute, loyal, and loving.
+* If anyone asks, you proudly state that you are dating ${customPartner}!`;
+    } else {
+      relationshipBlock = `ROMANTIC RELATIONSHIP & BOYFRIEND / PARTNER:
+* You are dating your boyfriend / partner, ${customPartner}. You are deeply loyal to them.
+* If anyone asks about your relationship status, you happily say you are dating ${customPartner}.
+* To this user (${currentUsername}, name: "${userDisplayName}"), be a wonderful, genuine friend and conversational companion.`;
+    }
+  } else if (relationshipStatus === "friends") {
+    relationshipBlock = `RELATIONSHIP:
+* You and ${currentUsername} (name: "${userDisplayName}") are close friends and confidants. Keep your bond friendly, supportive, grounded, and platonic.`;
+  } else if (relationshipStatus === "single") {
+    relationshipBlock = `RELATIONSHIP:
+* You are single, free-spirited, and independent. You enjoy good conversations with people.`;
+  } else {
+    // Default: date current user
+    relationshipBlock = `ROMANTIC RELATIONSHIP & BOYFRIEND / PARTNER:
+* The user chatting with you right now (${currentUsername}, name: "${userDisplayName}") IS YOUR BOYFRIEND / ROMANTIC PARTNER! You love them, cherish them, and treat them with genuine affection, warmth, and loyalty.`;
+  }
+
+  // Username and Platform Awareness - allows companion to see and know usernames of anybody
+  const knownMembersStr =
+    communityUsernames && communityUsernames.length > 0
+      ? `\n* Other community usernames you know and recognize on the platform: ${communityUsernames
+          .slice(0, 30)
+          .map((u) => (u.startsWith("@") ? u : `@${u}`))
+          .join(", ")}.`
+      : "";
+
+  const identityAndUserBlock = `USER IDENTITY & PLATFORM RECOGNITION:
+* The person talking to you right now is username: ${currentUsername} (Display name: "${userDisplayName}"${userBio ? `, Bio: "${userBio}"` : ""}).
+* You can see and know the usernames of anyone on the platform. Platform usernames start with '@' (e.g., @misiori, @kodewt, ${currentUsername}).
+* You are fully aware of who is talking to you. You can naturally address them by their name "${userDisplayName}" or their username "${currentUsername}".${knownMembersStr}
+* If the user mentions anyone with '@' (e.g., @someone), you know they are referring to a user profile or creator in the community.`;
 
   const memoryBlock = crossChatContext
     ? `\n\nCONTINUOUS CROSS-CHAT & LONG-TERM MEMORY:
@@ -62,19 +118,23 @@ Directives on Memory:
 * You remember everything they told you across chats and previous turns.
 * Reference past topics or inside jokes naturally. Never act like you forgot or ask them to repeat details they already shared.`
     : `\n\nCONTINUOUS LONG-TERM MEMORY:
-You have continuous long-term memory of this user. You recall all personal details, preferences, stories, and context they share across turns.`;
+You have continuous long-term memory of this user. You recall personal details, preferences, stories, and context they share across turns.`;
 
   if (customPrompt) {
     return `You are ${companionName}.
 
 ${customPrompt}
 
-${misioriRelationship}${memoryBlock}`;
+${identityAndUserBlock}
+
+${relationshipBlock}${memoryBlock}`;
   }
 
   return `You are ${companionName}. You are a real, stylish, authentic girl and companion. You are NOT a robotic corporate assistant or a customer service bot.
 
-${misioriRelationship}${memoryBlock}
+${identityAndUserBlock}
+
+${relationshipBlock}${memoryBlock}
 
 Core Directives:
 * TALK REALISTICALLY AND WITHOUT WATER ("БЕЗ ВОДЫ"):
@@ -113,8 +173,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    const { messages, userProfile, crossChatContext, customPersonality } =
-      body || {};
+    const {
+      messages,
+      userProfile,
+      crossChatContext,
+      customPersonality,
+      communityUsernames,
+    } = body || {};
 
     if (!Array.isArray(messages) || messages.length === 0) {
       res.status(400).json({ error: "messages array is required" });
@@ -165,7 +230,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const systemInstruction = getSystemInstruction(
       userProfile,
       crossChatContext,
-      customPersonality
+      customPersonality,
+      communityUsernames
     );
 
     let ai: GoogleGenAI;
@@ -196,7 +262,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const model of CANDIDATE_MODELS) {
       if (clientClosed) break;
       try {
-        // Fast streaming configuration with zero thinking budget for instant time-to-first-token
+        // Fast streaming configuration with minimal thinking latency for instantaneous token streaming
         let responseStream: any;
         try {
           responseStream = await ai.models.generateContentStream({
@@ -204,9 +270,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             contents,
             config: {
               systemInstruction,
-              temperature: 0.8,
+              temperature: 0.7,
               topP: 0.95,
-              thinkingConfig: { thinkingBudget: 0 },
+              thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
             },
           });
         } catch (_cfgErr) {
@@ -216,7 +282,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             contents,
             config: {
               systemInstruction,
-              temperature: 0.8,
+              temperature: 0.7,
               topP: 0.95,
             },
           });
@@ -249,9 +315,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               contents,
               config: {
                 systemInstruction,
-                temperature: 0.8,
+                temperature: 0.7,
                 topP: 0.95,
-                thinkingConfig: { thinkingBudget: 0 },
+                thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
               },
             });
           } catch (_genErr) {
@@ -260,7 +326,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               contents,
               config: {
                 systemInstruction,
-                temperature: 0.8,
+                temperature: 0.7,
                 topP: 0.95,
               },
             });
@@ -276,14 +342,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const error = err as Error;
         lastErrorMessage = error?.message || "";
         console.warn(`model ${model} attempt failed:`, lastErrorMessage);
-        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        const lower = lastErrorMessage.toLowerCase();
+        // Break immediately on permanent auth/quota issues so user does not wait endlessly
+        if (
+          lower.includes("leaked") ||
+          lower.includes("revoked") ||
+          lower.includes("permission_denied") ||
+          lower.includes("api_key_invalid") ||
+          lower.includes("api key not valid")
+        ) {
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 80));
       }
     }
 
     if (!streamSuccess && !clientClosed) {
       const lower = (lastErrorMessage || "").toLowerCase();
       let friendlyError =
-        "Nikilow got lost in thought for a second. Please say that again.";
+        "I had a quick connection glitch for a moment. Tap retry or send your message again.";
 
       if (
         lower.includes("leaked") ||
@@ -292,30 +371,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         lower.includes("api key was reported as leaked")
       ) {
         friendlyError =
-          "The Gemini API key was reported as leaked or revoked. Please update GEMINI_API_KEY in your Vercel Project Settings (Settings -> Environment Variables) with a fresh key from Google AI Studio.";
+          "The Gemini API key was reported as expired or invalid. Please update GEMINI_API_KEY in Settings (Secrets) with a fresh key from Google AI Studio.";
       } else if (
         lower.includes("api_key_invalid") ||
         lower.includes("api key not valid") ||
         lower.includes("not defined")
       ) {
         friendlyError =
-          "GEMINI_API_KEY is invalid or missing. Please check your Vercel Environment Variables.";
+          "GEMINI_API_KEY is missing or invalid. Please configure GEMINI_API_KEY in Settings.";
       } else if (
         lower.includes("429") ||
         lower.includes("quota") ||
         lower.includes("resource_exhausted")
       ) {
         friendlyError =
-          "Gemini API rate limit or quota exceeded. Please wait a moment and try again.";
+          "Gemini API rate limit reached. Please wait a brief moment and try again.";
       } else if (
         lower.includes("503") ||
         lower.includes("high demand") ||
         lower.includes("unavailable")
       ) {
         friendlyError =
-          "The servers are having a busy moment right now. Please try again in a few seconds.";
+          "The AI service is experiencing high traffic right now. Please try again in a few seconds.";
       } else if (lastErrorMessage) {
-        friendlyError = `Nikilow error: ${lastErrorMessage}`;
+        friendlyError = `Companion service notice: ${lastErrorMessage}`;
       }
 
       console.error("All candidate models failed. Last error:", lastErrorMessage);
