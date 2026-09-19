@@ -12,6 +12,14 @@ const STORAGE_ACTIVE_CHAT_KEY = 'nikilow_active_chat_id';
 const STORAGE_THEME_KEY = 'nikilow_theme_mode';
 const STORAGE_PERSONALITY_KEY = 'nikilow_companion_personality_v1';
 
+export function getChatStorageKey(userId?: string | null): string {
+  return userId ? `nikilow_chats_user_${userId}` : STORAGE_CHATS_KEY;
+}
+
+export function getActiveChatStorageKey(userId?: string | null): string {
+  return userId ? `nikilow_active_chat_user_${userId}` : STORAGE_ACTIVE_CHAT_KEY;
+}
+
 export function createNewSession(initialTitle?: string): ChatSession {
   const id = 'chat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
   return {
@@ -23,9 +31,10 @@ export function createNewSession(initialTitle?: string): ChatSession {
   };
 }
 
-export function loadSavedSessions(): ChatSession[] {
+export function loadSavedSessions(userId?: string | null): ChatSession[] {
   try {
-    const raw = localStorage.getItem(STORAGE_CHATS_KEY);
+    const key = getChatStorageKey(userId);
+    const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -49,34 +58,70 @@ export function loadSavedSessions(): ChatSession[] {
   return [];
 }
 
-export function saveSessions(sessions: ChatSession[]): void {
+export function saveSessions(sessions: ChatSession[], userId?: string | null): void {
   try {
-    localStorage.setItem(STORAGE_CHATS_KEY, JSON.stringify(sessions));
+    const key = getChatStorageKey(userId);
+    localStorage.setItem(key, JSON.stringify(sessions));
   } catch (err) {
     console.warn('Failed to save chats to localStorage:', err);
   }
 }
 
-export function loadActiveChatId(): string | null {
+export function loadActiveChatId(userId?: string | null): string | null {
   try {
-    return localStorage.getItem(STORAGE_ACTIVE_CHAT_KEY);
+    const key = getActiveChatStorageKey(userId);
+    return localStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
-export function saveActiveChatId(id: string): void {
+export function saveActiveChatId(id: string, userId?: string | null): void {
   try {
-    localStorage.setItem(STORAGE_ACTIVE_CHAT_KEY, id);
+    const key = getActiveChatStorageKey(userId);
+    localStorage.setItem(key, id);
   } catch {
     // ignore
   }
 }
 
-export function clearSavedSessions(): void {
+export function clearSavedSessions(userId?: string | null): void {
   try {
     localStorage.removeItem(STORAGE_CHATS_KEY);
     localStorage.removeItem(STORAGE_ACTIVE_CHAT_KEY);
+    localStorage.removeItem('nikilow_chats_guest');
+    localStorage.removeItem('nikilow_active_chat_guest');
+    localStorage.removeItem('nikilow_active_profile');
+
+    if (userId) {
+      localStorage.removeItem(`nikilow_chats_user_${userId}`);
+      localStorage.removeItem(`nikilow_active_chat_user_${userId}`);
+      localStorage.removeItem(`nikilow_user_profile_${userId}`);
+      localStorage.removeItem(`nikilow_companion_personality_${userId}`);
+      localStorage.removeItem(`nikilow_user_likes_${userId}`);
+    }
+
+    // Sweep any and all stored chat session keys to guarantee zero chat leakage between accounts or after logout
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (
+          k &&
+          (k.startsWith('nikilow_chats_') ||
+            k.startsWith('nikilow_active_chat_') ||
+            k === 'nikilow_active_profile')
+        ) {
+          keysToRemove.push(k);
+        }
+      }
+      for (const k of keysToRemove) {
+        localStorage.removeItem(k);
+      }
+    } catch {
+      // ignore
+    }
+
     localStorage.removeItem('nikilow_feed_posts_cache');
     localStorage.removeItem('nikilow_feed_posts_v2');
   } catch {

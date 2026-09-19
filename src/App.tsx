@@ -235,19 +235,12 @@ export default function App() {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
-  // Sessions state
+  // Sessions state: fresh default session, populated per-user upon auth verification
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    const saved = loadSavedSessions();
-    if (saved.length > 0) return saved;
-    const initial = createNewSession();
-    return [initial];
+    return [createNewSession()];
   });
 
   const [activeSessionId, setActiveSessionId] = useState<string>(() => {
-    const savedId = loadActiveChatId();
-    if (savedId && sessions.some((s) => s.id === savedId)) {
-      return savedId;
-    }
     return sessions[0]?.id || '';
   });
 
@@ -258,6 +251,16 @@ export default function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const likingPostsRef = useRef<Set<string>>(new Set());
+  const currentUserIdRef = useRef<string | null | undefined>(undefined);
+
+  // Stop streaming helper
+  const handleStopStreaming = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  }, []);
 
   // Load Feed Posts on mount
   const refreshPosts = useCallback(async () => {
@@ -276,142 +279,109 @@ export default function App() {
     refreshPosts();
   }, [refreshPosts]);
 
-  // Helper: safely merge cloud chats with local sessions uniting messages by id across devices
-  const mergeChatSessions = (cloudList: ChatSession[], currentList: ChatSession[]): ChatSession[] => {
-    if (!cloudList || cloudList.length === 0) return currentList;
-    const map = new Map<string, ChatSession>();
+  // Handle user authentication transitions (sign in, sign out, account switch)
+  const handleAuthUserSwitch = useCallback(
+    async (sessionUser: { id: string } | null) => {
+      const newUserId = sessionUser?.id || null;
+      const prevUserId = currentUserIdRef.current;
 
-    // Index cloud sessions
-    for (const c of cloudList) {
-      map.set(c.id, c);
-    }
-
-    // Overlay current local sessions uniting messages across devices
-    for (const cur of currentList) {
-      const existing = map.get(cur.id);
-      if (!existing) {
-        if (cur.messages.length > 0 || map.size === 0) {
-          map.set(cur.id, cur);
-        }
-      } else {
-        const msgMap = new Map<string, Message>();
-        for (const m of existing.messages) {
-          if (m && m.id) msgMap.set(m.id, m);
-        }
-        for (const m of cur.messages) {
-          if (m && m.id) msgMap.set(m.id, m);
-        }
-        const combinedMessages = Array.from(msgMap.values()).sort((a, b) => {
-          const diff = (a.createdAt || 0) - (b.createdAt || 0);
-          if (diff !== 0) return diff;
-          if (a.role === 'user' && b.role === 'assistant') return -1;
-          if (a.role === 'assistant' && b.role === 'user') return 1;
-          return (a.id || '').localeCompare(b.id || '');
-        });
-
-        map.set(cur.id, {
-          ...existing,
-          ...cur,
-          title: cur.title || existing.title,
-          updatedAt: Math.max(cur.updatedAt || 0, existing.updatedAt || 0),
-          messages: combinedMessages,
-        });
+      // Skip redundant executions if user ID is strictly unchanged
+      if (prevUserId !== undefined && prevUserId === newUserId) {
+        return;
       }
-    }
 
-    const merged = Array.from(map.values()).sort((a, b) => b.updatedAt - a.updatedAt);
-    return merged.length > 0 ? merged : currentList;
-  };
+      currentUserIdRef.current = newUserId;
+      handleStopStreaming();
+
+      if (!newUserId) {
+        // ================= USER LOGGED OUT =================
+        // Per user request: once logged out, chats are cleared so they cannot be accessed
+        clearSavedSessions(prevUserId || undefined);
+        setUserProfile(null);
+        setViewedProfile(null);
+
+        // Reset conversation to a clean, fresh empty chat
+        const fresh = createNewSession();
+        setSessions([fresh]);
+        setActiveSessionId(fresh.id);
+
+        // Reset companion personality back to default
+        const defaultPersonality = resetCompanionPersonality();
+        setPersonality(defaultPersonality);
+        saveCompanionPersonality(defaultPersonality);
+        return;
+      }
+
+      // ================= USER LOGGED IN =================
+      // 1. Wipe previous user's chats and state so they never bleed into this account
+      clearSavedSessions(prevUserId || undefined);
+
+      // 2. Fetch profile
+      const profile = await fetchUserProfile(newUserId);
+      if (profile) {
+        setUserProfile(profile);
+      }
+
+      // 3. Restore companion personality saved to this account
+      const accountPersonality =
+        profile?.companion_personality ||
+        (await loadPersonalityFromAccount(newUserId));
+      if (accountPersonality) {
+        setPersonality(accountPersonality);
+        saveCompanionPersonality(accountPersonality);
+      } else {
+        const defaultP = resetCompanionPersonality();
+        setPersonality(defaultP);
+        saveCompanionPersonality(defaultP);
+      }
+
+      // 4. Load chats EXCLUSIVELY for this account from Supabase
+      const cloudChats = await loadChatsFromSupabase(newUserId);
+      if (cloudChats && cloudChats.length > 0) {
+        const sorted = [...cloudChats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        setSessions(sorted);
+        saveSessions(sorted, newUserId);
+        setActiveSessionId(sorted[0].id);
+      } else {
+        // Check offline cache for this specific user if any
+        const cachedUserChats = loadSavedSessions(newUserId);
+        if (cachedUserChats.length > 0) {
+          setSessions(cachedUserChats);
+          setActiveSessionId(cachedUserChats[0].id);
+        } else {
+          // Account has no chats yet: start fresh with a clean session for this user
+          const fresh = [createNewSession()];
+          setSessions(fresh);
+          saveSessions(fresh, newUserId);
+          setActiveSessionId(fresh[0].id);
+        }
+      }
+    },
+    [handleStopStreaming]
+  );
 
   // Sync profile, personality & chats on Supabase auth change
   useEffect(() => {
     // Check initial auth session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id);
-        if (profile) {
-          setUserProfile(profile);
-        }
-
-        // Restore companion personality saved to account
-        const accountPersonality =
-          profile?.companion_personality ||
-          (await loadPersonalityFromAccount(session.user.id));
-        if (accountPersonality) {
-          setPersonality(accountPersonality);
-          saveCompanionPersonality(accountPersonality);
-        }
-
-        // Safely merge chats from Supabase without deleting active messages
-        const cloudChats = await loadChatsFromSupabase(session.user.id);
-        if (cloudChats && cloudChats.length > 0) {
-          let updatedMerged: ChatSession[] = [];
-          setSessions((prev) => {
-            const merged = mergeChatSessions(cloudChats, prev);
-            updatedMerged = merged;
-            saveSessions(merged);
-            return merged;
-          });
-          setActiveSessionId((prevId) => {
-            const currentActive = updatedMerged.find((s) => s.id === prevId);
-            if (!currentActive || currentActive.messages.length === 0) {
-              const sessionWithMessages = updatedMerged.find((s) => s.messages.length > 0);
-              if (sessionWithMessages) return sessionWithMessages.id;
-            }
-            return prevId || updatedMerged[0]?.id;
-          });
-        }
-      }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthUserSwitch(session?.user || null);
     });
 
     // Listen to auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id);
-        if (profile) {
-          setUserProfile(profile);
-        }
-
-        // Restore companion personality saved to account
-        const accountPersonality =
-          profile?.companion_personality ||
-          (await loadPersonalityFromAccount(session.user.id));
-        if (accountPersonality) {
-          setPersonality(accountPersonality);
-          saveCompanionPersonality(accountPersonality);
-        }
-
-        const cloudChats = await loadChatsFromSupabase(session.user.id);
-        if (cloudChats && cloudChats.length > 0) {
-          let updatedMerged: ChatSession[] = [];
-          setSessions((prev) => {
-            const merged = mergeChatSessions(cloudChats, prev);
-            updatedMerged = merged;
-            saveSessions(merged);
-            return merged;
-          });
-          setActiveSessionId((prevId) => {
-            const currentActive = updatedMerged.find((s) => s.id === prevId);
-            if (!currentActive || currentActive.messages.length === 0) {
-              const sessionWithMessages = updatedMerged.find((s) => s.messages.length > 0);
-              if (sessionWithMessages) return sessionWithMessages.id;
-            }
-            return prevId || updatedMerged[0]?.id;
-          });
-        }
+      if (event === 'SIGNED_OUT' || !session?.user) {
+        await handleAuthUserSwitch(null);
       } else {
-        setUserProfile(null);
-        const local = loadCompanionPersonality();
-        setPersonality(local);
+        await handleAuthUserSwitch(session.user);
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [handleAuthUserSwitch]);
 
   // Ensure activeSessionId stays synchronized with valid sessions
   useEffect(() => {
@@ -420,19 +390,19 @@ export default function App() {
     }
   }, [sessions, activeSessionId]);
 
-  // Save sessions to localStorage whenever they change
+  // Save sessions to localStorage whenever they change (strictly scoped to logged-in user)
   useEffect(() => {
-    if (sessions.length > 0) {
-      saveSessions(sessions);
+    if (sessions.length > 0 && userProfile?.id) {
+      saveSessions(sessions, userProfile.id);
     }
-  }, [sessions]);
+  }, [sessions, userProfile?.id]);
 
-  // Save active session id
+  // Save active session id (strictly scoped to logged-in user)
   useEffect(() => {
-    if (activeSessionId) {
-      saveActiveChatId(activeSessionId);
+    if (activeSessionId && userProfile?.id) {
+      saveActiveChatId(activeSessionId, userProfile.id);
     }
-  }, [activeSessionId]);
+  }, [activeSessionId, userProfile?.id]);
 
   // Find active session
   const activeSession = useMemo(() => {
@@ -442,14 +412,6 @@ export default function App() {
       createNewSession()
     );
   }, [sessions, activeSessionId]);
-
-  const handleStopStreaming = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    setIsStreaming(false);
-  }, []);
 
   // Navigation handlers
   const handleTabChange = (tab: ActiveTab) => {
@@ -697,26 +659,28 @@ export default function App() {
 
   // Sign out handler
   const handleSignOut = async () => {
+    handleStopStreaming();
     await supabase.auth.signOut();
-    setUserProfile(null);
-    setViewedProfile(null);
+    await handleAuthUserSwitch(null);
   };
 
   // Chat Sessions handlers
   const handleNewSession = () => {
-    if (isStreaming) {
-      handleStopStreaming();
-    }
+    handleStopStreaming();
     const newSession = createNewSession();
-    setSessions((prev) => [newSession, ...prev]);
+    setSessions((prev) => {
+      const next = [newSession, ...prev];
+      if (userProfile?.id) {
+        saveSessions(next, userProfile.id);
+      }
+      return next;
+    });
     setActiveSessionId(newSession.id);
     setActiveTab('chat');
   };
 
   const handleSelectSession = (id: string) => {
-    if (isStreaming) {
-      handleStopStreaming();
-    }
+    handleStopStreaming();
     setActiveSessionId(id);
     setActiveTab('chat');
   };
@@ -732,27 +696,34 @@ export default function App() {
       if (remaining.length === 0) {
         const fresh = createNewSession();
         setActiveSessionId(fresh.id);
+        if (userProfile?.id) {
+          saveSessions([fresh], userProfile.id);
+        }
         return [fresh];
       }
       if (activeSessionId === id) {
         setActiveSessionId(remaining[0].id);
+      }
+      if (userProfile?.id) {
+        saveSessions(remaining, userProfile.id);
       }
       return remaining;
     });
   };
 
   const handleClearAllConfirm = () => {
-    if (isStreaming) {
-      handleStopStreaming();
-    }
+    handleStopStreaming();
     if (userProfile?.id) {
       clearAllChatsFromSupabase(userProfile.id).catch((err) => {
         console.warn('clearAllChatsFromSupabase notice:', err);
       });
     }
-    clearSavedSessions();
+    clearSavedSessions(userProfile?.id);
     const fresh = createNewSession();
     setSessions([fresh]);
+    if (userProfile?.id) {
+      saveSessions([fresh], userProfile.id);
+    }
     setActiveSessionId(fresh.id);
     setIsClearModalOpen(false);
   };
@@ -820,7 +791,7 @@ export default function App() {
         };
         next = [freshSession, ...prev];
       }
-      saveSessions(next);
+      saveSessions(next, userProfile?.id);
       return next;
     });
 
@@ -986,7 +957,9 @@ export default function App() {
           }
           return s;
         });
-        saveSessions(updated);
+        if (userProfile?.id) {
+          saveSessions(updated, userProfile.id);
+        }
 
         // Sync to Supabase if logged in
         if (userProfile?.id && accumulatedText) {
@@ -1021,7 +994,9 @@ export default function App() {
             }
             return s;
           });
-          saveSessions(updated);
+          if (userProfile?.id) {
+            saveSessions(updated, userProfile.id);
+          }
           return updated;
         });
       }
@@ -1029,7 +1004,9 @@ export default function App() {
       setIsStreaming(false);
       abortControllerRef.current = null;
       setSessions((prev) => {
-        saveSessions(prev);
+        if (userProfile?.id) {
+          saveSessions(prev, userProfile.id);
+        }
         return prev;
       });
     }
@@ -1066,7 +1043,9 @@ export default function App() {
         }
         return s;
       });
-      saveSessions(updated);
+      if (userProfile?.id) {
+        saveSessions(updated, userProfile.id);
+      }
       return updated;
     });
 
