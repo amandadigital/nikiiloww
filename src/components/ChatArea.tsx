@@ -3,6 +3,7 @@ import {
   useState,
   useRef,
   useEffect,
+  useMemo,
   KeyboardEvent,
   ChangeEvent,
 } from 'react';
@@ -84,6 +85,17 @@ export const ChatArea: FC<ChatAreaProps> = ({
   const companionName = personality.name || 'niki';
   const companionAvatar = personality.avatarUrl || DEFAULT_NIKILOW_AVATAR;
   const accentCfg = ACCENT_CONFIG[accentColor] || ACCENT_CONFIG.rose;
+
+  // Guarantee strict chronological order: user message always appears before the assistant's reply
+  const sortedMessages = useMemo(() => {
+    return [...messages].sort((a, b) => {
+      const diff = (a.createdAt || 0) - (b.createdAt || 0);
+      if (diff !== 0) return diff;
+      if (a.role === 'user' && b.role === 'assistant') return -1;
+      if (a.role === 'assistant' && b.role === 'user') return 1;
+      return (a.id || '').localeCompare(b.id || '');
+    });
+  }, [messages]);
 
   const starters = isDatingThisUser
     ? [
@@ -271,7 +283,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
           onScroll={handleScroll}
           className="flex-1 overflow-y-auto px-2 py-4 space-y-2 scroll-smooth relative z-1"
         >
-        {messages.length === 0 ? (
+        {sortedMessages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center max-w-xl mx-auto px-4 text-center select-none">
             {/* Companion Photo Avatar */}
             <div className="relative w-20 h-20 rounded-3xl overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 shadow-lg mb-4 bg-gray-100 dark:bg-gray-800">
@@ -323,8 +335,8 @@ export const ChatArea: FC<ChatAreaProps> = ({
           </div>
         ) : (
           <div className="py-2">
-            {messages.map((message, index) => {
-              const isLast = index === messages.length - 1;
+            {sortedMessages.map((message, index) => {
+              const isLast = index === sortedMessages.length - 1;
               return (
                 <MessageItem
                   key={message.id || index}

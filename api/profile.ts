@@ -89,6 +89,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           companion_prompt: personality.prompt,
           companion_avatar_url: personality.avatarUrl,
           companion_personality: personality,
+          companion_relationship_status:
+            personality.relationshipStatus || 'dating_user',
+          companion_partner_name: personality.partnerName || null,
           updated_at: new Date().toISOString(),
         };
         profiles[userId] = updated;
@@ -103,6 +106,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               companion_prompt: personality.prompt,
               companion_avatar_url: personality.avatarUrl,
               companion_personality: personality,
+              companion_relationship_status:
+                personality.relationshipStatus || 'dating_user',
+              companion_partner_name: personality.partnerName || null,
               updated_at: new Date().toISOString(),
             })
             .eq("id", userId);

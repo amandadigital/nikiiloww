@@ -16,16 +16,20 @@ create table if not exists public.profiles (
   companion_prompt text,
   companion_avatar_url text,
   companion_personality jsonb,
+  companion_relationship_status text default 'dating_user',
+  companion_partner_name text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- In case profiles table already exists, safely add the companion personality columns
+-- In case profiles table already exists, safely add the companion personality and dating columns
 alter table public.profiles
   add column if not exists companion_name text default 'nikilow',
   add column if not exists companion_prompt text,
   add column if not exists companion_avatar_url text,
-  add column if not exists companion_personality jsonb;
+  add column if not exists companion_personality jsonb,
+  add column if not exists companion_relationship_status text default 'dating_user',
+  add column if not exists companion_partner_name text;
 
 -- Case-insensitive index for fast username lookups
 create index if not exists idx_profiles_username_lower on public.profiles (lower(username));
@@ -294,6 +298,39 @@ begin
   where id = post_id_input;
 end;
 $$;
+
+-- Trigger function to automatically keep posts.likes_count synchronized in real-time
+create or replace function public.sync_post_likes_count()
+returns trigger
+language plpgsql
+security definer
+as $$
+declare
+  target_post_id text;
+begin
+  if (TG_OP = 'DELETE') then
+    target_post_id := OLD.post_id;
+  else
+    target_post_id := NEW.post_id;
+  end if;
+
+  update public.posts
+  set likes_count = (
+    select count(*)
+    from public.post_likes
+    where post_likes.post_id = target_post_id
+  )
+  where id = target_post_id;
+
+  return null;
+end;
+$$;
+
+drop trigger if exists trg_sync_post_likes_count on public.post_likes;
+create trigger trg_sync_post_likes_count
+after insert or delete on public.post_likes
+for each row
+execute function public.sync_post_likes_count();
 
 grant execute on function public.increment_post_likes(text) to anon, authenticated;
 grant execute on function public.decrement_post_likes(text) to anon, authenticated;

@@ -29,7 +29,18 @@ export function loadSavedSessions(): ChatSession[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((session) => ({
+          ...session,
+          messages: Array.isArray(session.messages)
+            ? [...session.messages].sort((a, b) => {
+                const diff = (a.createdAt || 0) - (b.createdAt || 0);
+                if (diff !== 0) return diff;
+                if (a.role === 'user' && b.role === 'assistant') return -1;
+                if (a.role === 'assistant' && b.role === 'user') return 1;
+                return (a.id || '').localeCompare(b.id || '');
+              })
+            : [],
+        }));
       }
     }
   } catch (err) {

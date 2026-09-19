@@ -257,6 +257,7 @@ export default function App() {
   // Streaming status & abort controller
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const likingPostsRef = useRef<Set<string>>(new Set());
 
   // Load Feed Posts on mount
   const refreshPosts = useCallback(async () => {
@@ -300,9 +301,13 @@ export default function App() {
         for (const m of cur.messages) {
           if (m && m.id) msgMap.set(m.id, m);
         }
-        const combinedMessages = Array.from(msgMap.values()).sort(
-          (a, b) => (a.createdAt || 0) - (b.createdAt || 0)
-        );
+        const combinedMessages = Array.from(msgMap.values()).sort((a, b) => {
+          const diff = (a.createdAt || 0) - (b.createdAt || 0);
+          if (diff !== 0) return diff;
+          if (a.role === 'user' && b.role === 'assistant') return -1;
+          if (a.role === 'assistant' && b.role === 'user') return 1;
+          return (a.id || '').localeCompare(b.id || '');
+        });
 
         map.set(cur.id, {
           ...existing,
@@ -622,8 +627,17 @@ export default function App() {
       return;
     }
 
+    // Prevent concurrent duplicate clicks on the same post
+    if (likingPostsRef.current.has(postId)) {
+      return;
+    }
+    likingPostsRef.current.add(postId);
+
     const post = posts.find((p) => p.id === postId);
-    if (!post) return;
+    if (!post) {
+      likingPostsRef.current.delete(postId);
+      return;
+    }
 
     // Instant optimistic toggle
     const willBeLiked = !post.isLiked;
@@ -652,6 +666,8 @@ export default function App() {
       }
     } catch (err) {
       console.warn('togglePostLike error:', err);
+    } finally {
+      likingPostsRef.current.delete(postId);
     }
   };
 
@@ -747,21 +763,23 @@ export default function App() {
 
     const cleanUserText = text.trim();
     const currentSessionId = activeSession.id;
+    const userTimestamp = Date.now();
+    const assistantTimestamp = userTimestamp + 50;
 
     const userMessage: Message = {
-      id: 'msg_u_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      id: 'msg_u_' + userTimestamp + '_' + Math.random().toString(36).substring(2, 6),
       role: 'user',
       content: cleanUserText,
-      createdAt: Date.now(),
+      createdAt: userTimestamp,
     };
 
     const assistantPlaceholderId =
-      'msg_a_' + (Date.now() + 1) + '_' + Math.random().toString(36).substring(2, 6);
+      'msg_a_' + assistantTimestamp + '_' + Math.random().toString(36).substring(2, 6);
     const assistantMessage: Message = {
       id: assistantPlaceholderId,
       role: 'assistant',
       content: '',
-      createdAt: Date.now(),
+      createdAt: assistantTimestamp,
     };
 
     // Keep the most recent 20 messages for high-speed prompt processing and memory continuity

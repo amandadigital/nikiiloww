@@ -372,6 +372,9 @@ export async function savePersonalityToAccount(
           companion_name: personality.name,
           companion_prompt: personality.prompt,
           companion_avatar_url: personality.avatarUrl,
+          companion_relationship_status:
+            personality.relationshipStatus || 'dating_user',
+          companion_partner_name: personality.partnerName || '',
         },
       });
     }
@@ -408,6 +411,9 @@ export async function savePersonalityToAccount(
           companion_prompt: personality.prompt,
           companion_avatar_url: personality.avatarUrl,
           companion_personality: personality,
+          companion_relationship_status:
+            personality.relationshipStatus || 'dating_user',
+          companion_partner_name: personality.partnerName || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId);
@@ -686,16 +692,24 @@ export async function syncChatToSupabase(chat: ChatSession, userId: string): Pro
 
     // 2. Upsert messages
     if (chat.messages && chat.messages.length > 0) {
+      let lastTime = 0;
       const msgRows = chat.messages
         .filter((m) => m && m.id && m.content)
-        .map((m) => ({
-          id: m.id,
-          chat_id: chat.id,
-          user_id: userId,
-          role: m.role === 'assistant' ? 'assistant' : 'user',
-          content: m.content || '',
-          created_at: new Date(m.createdAt || Date.now()).toISOString(),
-        }));
+        .map((m, idx) => {
+          let ts = m.createdAt || Date.now() + idx * 10;
+          if (ts <= lastTime) {
+            ts = lastTime + 10;
+          }
+          lastTime = ts;
+          return {
+            id: m.id,
+            chat_id: chat.id,
+            user_id: userId,
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content || '',
+            created_at: new Date(ts).toISOString(),
+          };
+        });
 
       if (msgRows.length > 0) {
         // Attempt bulk upsert
@@ -770,13 +784,23 @@ export async function loadChatsFromSupabase(userId: string): Promise<ChatSession
       messagesByChat.set(m.chat_id, list);
     }
 
-    const sessions: ChatSession[] = chatRows.map((c) => ({
-      id: c.id,
-      title: c.title || 'new conversation',
-      messages: messagesByChat.get(c.id) || [],
-      createdAt: c.created_at ? new Date(c.created_at).getTime() : Date.now(),
-      updatedAt: c.updated_at ? new Date(c.updated_at).getTime() : Date.now(),
-    }));
+    const sessions: ChatSession[] = chatRows.map((c) => {
+      const chatMsgs = (messagesByChat.get(c.id) || []).sort((a, b) => {
+        const diff = (a.createdAt || 0) - (b.createdAt || 0);
+        if (diff !== 0) return diff;
+        if (a.role === 'user' && b.role === 'assistant') return -1;
+        if (a.role === 'assistant' && b.role === 'user') return 1;
+        return (a.id || '').localeCompare(b.id || '');
+      });
+
+      return {
+        id: c.id,
+        title: c.title || 'new conversation',
+        messages: chatMsgs,
+        createdAt: c.created_at ? new Date(c.created_at).getTime() : Date.now(),
+        updatedAt: c.updated_at ? new Date(c.updated_at).getTime() : Date.now(),
+      };
+    });
 
     return sessions;
   } catch (err: any) {
@@ -1229,17 +1253,39 @@ export async function togglePostLike(
   // Try updating Supabase directly
   try {
     if (nextLiked) {
-      await supabase.from('post_likes').upsert({
-        post_id: postId,
-        user_id: userId,
-      });
-      await supabase.rpc('increment_post_likes', { post_id_input: postId });
+      await supabase.from('post_likes').upsert(
+        {
+          post_id: postId,
+          user_id: userId,
+        },
+        { onConflict: 'post_id,user_id' }
+      );
     } else {
       await supabase
         .from('post_likes')
         .delete()
-        .match({ post_id: postId, user_id: userId });
-      await supabase.rpc('decrement_post_likes', { post_id_input: postId });
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+    }
+
+    // Always fetch the exact, true count from post_likes table
+    const { count } = await supabase
+      .from('post_likes')
+      .select('post_id', { count: 'exact', head: true })
+      .eq('post_id', postId);
+
+    if (typeof count === 'number') {
+      calculatedCount = count;
+      await supabase
+        .from('posts')
+        .update({ likes_count: count })
+        .eq('id', postId);
+
+      // Keep local posts cache accurate
+      const refreshedLocal = getStoredLocalPosts().map((p) =>
+        p.id === postId ? { ...p, likesCount: count, isLiked: nextLiked } : p
+      );
+      saveStoredLocalPosts(refreshedLocal);
     }
   } catch (err) {
     console.warn('togglePostLike remote client notice:', err);

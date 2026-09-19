@@ -17,6 +17,8 @@ create table if not exists public.profiles (
   companion_prompt text,
   companion_avatar_url text,
   companion_personality jsonb,
+  companion_relationship_status text default 'dating_user',
+  companion_partner_name text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -26,7 +28,9 @@ alter table public.profiles
   add column if not exists companion_name text default 'nikilow',
   add column if not exists companion_prompt text,
   add column if not exists companion_avatar_url text,
-  add column if not exists companion_personality jsonb;
+  add column if not exists companion_personality jsonb,
+  add column if not exists companion_relationship_status text default 'dating_user',
+  add column if not exists companion_partner_name text;
 
 -- Case-insensitive index for fast username lookups
 create index if not exists idx_profiles_username_lower on public.profiles (lower(username));
