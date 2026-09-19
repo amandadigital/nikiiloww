@@ -1103,7 +1103,7 @@ export default function App() {
 
       {/* Slide-in menu & chat history drawer */}
       <Sidebar
-        sessions={sessions}
+        sessions={userProfile ? sessions : []}
         activeId={activeSession.id}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
@@ -1117,6 +1117,7 @@ export default function App() {
           setActiveTab('profile');
         }}
         onOpenAuth={handleOpenAuthModal}
+        onSignOut={handleSignOut}
         personality={personality}
         onSavePersonality={handleSavePersonality}
         onResetPersonality={handleResetPersonality}

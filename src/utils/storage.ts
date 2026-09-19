@@ -32,6 +32,7 @@ export function createNewSession(initialTitle?: string): ChatSession {
 }
 
 export function loadSavedSessions(userId?: string | null): ChatSession[] {
+  if (!userId) return [];
   try {
     const key = getChatStorageKey(userId);
     const raw = localStorage.getItem(key);
@@ -59,6 +60,7 @@ export function loadSavedSessions(userId?: string | null): ChatSession[] {
 }
 
 export function saveSessions(sessions: ChatSession[], userId?: string | null): void {
+  if (!userId) return; // Never persist chat history for logged-out / guest sessions
   try {
     const key = getChatStorageKey(userId);
     localStorage.setItem(key, JSON.stringify(sessions));
@@ -68,6 +70,7 @@ export function saveSessions(sessions: ChatSession[], userId?: string | null): v
 }
 
 export function loadActiveChatId(userId?: string | null): string | null {
+  if (!userId) return null;
   try {
     const key = getActiveChatStorageKey(userId);
     return localStorage.getItem(key);
@@ -77,6 +80,7 @@ export function loadActiveChatId(userId?: string | null): string | null {
 }
 
 export function saveActiveChatId(id: string, userId?: string | null): void {
+  if (!userId) return;
   try {
     const key = getActiveChatStorageKey(userId);
     localStorage.setItem(key, id);
