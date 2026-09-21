@@ -16,6 +16,9 @@ import { Post, UserProfile } from '../types';
 import { VerifiedBadge } from './VerifiedBadge';
 import { PostItem } from './PostItem';
 import { usePostRateLimit } from '../utils/rateLimit';
+import { DecoratedAvatar } from './DecoratedAvatar';
+import { DecoratedName } from './DecoratedName';
+import { getBackgroundStyle, getBackgroundOpacity } from '../utils/decorations';
 
 interface ProfileViewProps {
   currentUser: UserProfile | null;
@@ -129,7 +132,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
             your profile
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-            sign in or create an account to view your profile, publish posts up to 300 characters, and chat directly with nikilow.
+            sign in or create an account to view your profile, publish posts up to 300 characters, and chat directly with dary.
           </p>
 
           <button
@@ -143,6 +146,11 @@ export const ProfileView: FC<ProfileViewProps> = ({
       </div>
     );
   }
+
+  // Only authentic verified users have the ability to make the verified badge seen for everyone
+  const isProfileBadge = isVerified && profile.decorations?.badge !== false;
+  const hasCustomBg = Boolean(profile.decorations?.backgroundValue);
+  const bgOpacity = getBackgroundOpacity(profile.decorations);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto pb-24 md:pb-8 bg-[#fbfbfa] dark:bg-[#0b0d11]">
@@ -202,43 +210,68 @@ export const ProfileView: FC<ProfileViewProps> = ({
 
       {/* Main Profile Content */}
       <div className="max-w-2xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Profile Card */}
-        <div className="p-6 sm:p-8 bg-white dark:bg-[#151922] border border-gray-200/80 dark:border-gray-800/80 rounded-3xl shadow-xs">
-          <div className="flex flex-col items-center text-center gap-4">
-            {/* Avatar with Verified Badge */}
+        {/* Profile Card with Decorations (Selected background fully replaces gray) */}
+        <div
+          className={`relative p-6 sm:p-8 rounded-3xl shadow-xs overflow-hidden transition-all duration-300 ${
+            hasCustomBg
+              ? 'border border-white/20 text-white shadow-md'
+              : 'bg-white dark:bg-[#151922] border border-gray-200/80 dark:border-gray-800/80'
+          }`}
+          style={hasCustomBg ? getBackgroundStyle(profile.decorations) : undefined}
+        >
+          {/* Subtle dimming overlay only if opacity is explicitly reduced below 100% */}
+          {hasCustomBg && bgOpacity < 1 && (
+            <div
+              className="absolute inset-0 bg-black pointer-events-none transition-opacity duration-300"
+              style={{ opacity: 1 - bgOpacity }}
+            />
+          )}
+
+          <div className="relative z-10 flex flex-col items-center text-center gap-4">
+            {/* Avatar with Animation and Verified Badge */}
             <div className="relative shrink-0">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800 shadow-sm">
-                {profile.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    alt={profile.name}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-600 dark:text-gray-300">
-                    {profile.name ? profile.name[0].toLowerCase() : 'u'}
-                  </div>
-                )}
-              </div>
+              <DecoratedAvatar
+                src={profile.avatar_url}
+                name={profile.name}
+                animation={profile.decorations?.avatarAnimation || 'none'}
+                pulseColor={profile.decorations?.pulseColor}
+                size="xl"
+              />
             </div>
 
             {/* User Meta */}
             <div className="w-full flex flex-col items-center text-center min-w-0">
               <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
-                  {profile.name}
-                </h2>
-                {isVerified && <VerifiedBadge size="md" />}
+                <DecoratedName
+                  name={profile.name}
+                  decorations={profile.decorations}
+                  onCustomBg={hasCustomBg}
+                  className={`text-xl font-bold tracking-tight ${
+                    hasCustomBg ? 'drop-shadow-sm' : ''
+                  }`}
+                />
+                {isProfileBadge && <VerifiedBadge size="md" />}
               </div>
 
-              <p className="text-xs font-medium text-rose-500 dark:text-rose-400 mt-0.5">
+              <p
+                className={`text-xs font-medium mt-0.5 font-mono ${
+                  hasCustomBg
+                    ? 'text-rose-300 dark:text-rose-300 drop-shadow-xs'
+                    : 'text-rose-500 dark:text-rose-400'
+                }`}
+              >
                 @{profile.username}
               </p>
 
               {/* Bio: only show if user has a bio */}
               {profile.bio && profile.bio.trim() ? (
-                <p className="text-xs text-gray-600 dark:text-gray-300 mt-2.5 leading-relaxed whitespace-pre-wrap max-w-md mx-auto text-center">
+                <p
+                  className={`text-xs mt-2.5 leading-relaxed whitespace-pre-wrap max-w-md mx-auto text-center ${
+                    hasCustomBg
+                      ? 'text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]'
+                      : 'text-gray-600 dark:text-gray-300'
+                  }`}
+                >
                   {profile.bio.trim()}
                 </p>
               ) : null}
@@ -246,7 +279,13 @@ export const ProfileView: FC<ProfileViewProps> = ({
               {/* Status badges */}
               {isVerified && (
                 <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-pink-50 dark:bg-pink-950/40 border border-pink-200/60 dark:border-pink-900/40 text-[11px] text-pink-500 dark:text-pink-400 font-medium">
+                  <div
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${
+                      hasCustomBg
+                        ? 'bg-white/20 backdrop-blur-md border border-white/30 text-white drop-shadow-xs'
+                        : 'bg-pink-50 dark:bg-pink-950/40 border border-pink-200/60 dark:border-pink-900/40 text-pink-500 dark:text-pink-400'
+                    }`}
+                  >
                     <ShieldCheck size={13} />
                     <span>verified</span>
                   </div>
@@ -254,21 +293,46 @@ export const ProfileView: FC<ProfileViewProps> = ({
               )}
 
               {/* Stats Row */}
-              <div className="flex items-center justify-center gap-6 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/80 w-full max-w-xs mx-auto">
+              <div
+                className={`flex items-center justify-center gap-6 mt-4 pt-3 w-full max-w-xs mx-auto border-t ${
+                  hasCustomBg
+                    ? 'border-white/20 text-white'
+                    : 'border-gray-100 dark:border-gray-800/80'
+                }`}
+              >
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  <span
+                    className={`text-sm font-bold ${
+                      hasCustomBg ? 'text-white drop-shadow-xs' : 'text-gray-900 dark:text-gray-100'
+                    }`}
+                  >
                     {userPosts.length}
                   </span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                  <span
+                    className={`text-xs ${
+                      hasCustomBg ? 'text-white/80' : 'text-gray-400 dark:text-gray-500'
+                    }`}
+                  >
                     posts
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Heart size={14} className="text-rose-500 fill-rose-500" />
-                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-mono">
+                  <Heart
+                    size={14}
+                    className={hasCustomBg ? 'text-rose-400 fill-rose-400' : 'text-rose-500 fill-rose-500'}
+                  />
+                  <span
+                    className={`text-sm font-bold font-mono ${
+                      hasCustomBg ? 'text-white drop-shadow-xs' : 'text-gray-900 dark:text-gray-100'
+                    }`}
+                  >
                     {totalLikes}
                   </span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                  <span
+                    className={`text-xs ${
+                      hasCustomBg ? 'text-white/80' : 'text-gray-400 dark:text-gray-500'
+                    }`}
+                  >
                     likes
                   </span>
                 </div>

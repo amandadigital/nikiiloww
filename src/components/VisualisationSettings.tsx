@@ -16,7 +16,6 @@ export const VisualisationSettings: FC<VisualisationSettingsProps> = ({
   wallpaperSettings,
   onUpdateWallpaper,
 }) => {
-  const [customInputUrl, setCustomInputUrl] = useState(wallpaperSettings.customUrl || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSelectPreset = (presetId: string) => {
@@ -41,17 +40,6 @@ export const VisualisationSettings: FC<VisualisationSettingsProps> = ({
     const updated: ChatWallpaperSettings = {
       ...wallpaperSettings,
       blur: val,
-    };
-    onUpdateWallpaper(updated);
-    saveWallpaperSettings(updated);
-  };
-
-  const handleApplyCustomUrl = () => {
-    if (!customInputUrl.trim()) return;
-    const updated: ChatWallpaperSettings = {
-      ...wallpaperSettings,
-      id: 'custom',
-      customUrl: customInputUrl.trim(),
     };
     onUpdateWallpaper(updated);
     saveWallpaperSettings(updated);
@@ -87,7 +75,6 @@ export const VisualisationSettings: FC<VisualisationSettingsProps> = ({
       opacity: 0.35,
       blur: 3,
     };
-    setCustomInputUrl('');
     onUpdateWallpaper(resetSettings);
     saveWallpaperSettings(resetSettings);
   };
@@ -158,44 +145,25 @@ export const VisualisationSettings: FC<VisualisationSettingsProps> = ({
       </div>
 
       {/* Upload Custom Wallpaper */}
-      <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 lowercase">
-            custom wallpaper
-          </span>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-medium transition"
-          >
-            <Upload size={12} />
-            <span>upload file</span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <input
-            type="text"
-            value={customInputUrl}
-            onChange={(e) => setCustomInputUrl(e.target.value)}
-            placeholder="paste image url..."
-            className="flex-1 text-xs rounded-xl bg-white dark:bg-[#121620] border border-gray-200 dark:border-gray-700/80 py-1.5 px-2.5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-rose-500 font-mono transition"
-          />
-          <button
-            onClick={handleApplyCustomUrl}
-            disabled={!customInputUrl.trim()}
-            className="px-2.5 py-1.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-medium disabled:opacity-40 transition"
-          >
-            apply
-          </button>
-        </div>
+      <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 lowercase">
+          custom wallpaper
+        </span>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-medium transition cursor-pointer"
+        >
+          <Upload size={12} />
+          <span>upload file</span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
       </div>
 
       {/* Opacity & Blur Sliders */}

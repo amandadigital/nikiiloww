@@ -136,9 +136,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Immediately persist to server storage
       const profiles = readStoredProfiles();
       const existing = profiles[userId] || {};
+      // Check if user is verified before allowing badge in decorations
+      const isVerified =
+        Boolean(existing.is_verified) ||
+        existing.username?.toLowerCase() === "kodewt" ||
+        profile.username?.toLowerCase() === "kodewt";
+
+      const sanitizedProfile = { ...profile };
+      if (sanitizedProfile.decorations) {
+        sanitizedProfile.decorations = {
+          ...sanitizedProfile.decorations,
+          badge: isVerified ? sanitizedProfile.decorations.badge !== false : false,
+        };
+      }
+
       const updated = {
         ...existing,
-        ...profile,
+        ...sanitizedProfile,
         id: userId,
         updated_at: new Date().toISOString(),
       };
@@ -164,6 +178,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             bio: updated.bio || "",
             updated_at: updated.updated_at,
           };
+          if (updated.decorations) {
+            payload.decorations = updated.decorations;
+          }
           if (updated.avatar_url && updated.avatar_url.length < 50000) {
             payload.avatar_url = updated.avatar_url;
           }
@@ -178,6 +195,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
           if (updated.companion_personality) {
             payload.companion_personality = updated.companion_personality;
+          }
+
+          // Use supabaseAdmin to persist directly to profiles table
+          try {
+            await supabaseAdmin
+              .from("profiles")
+              .update(payload)
+              .eq("id", userId);
+
+            // If decorations updated, also synchronize decorations to author's posts so everybody sees them immediately
+            if (updated.decorations) {
+              await supabaseAdmin
+                .from("posts")
+                .update({ decorations: updated.decorations })
+                .eq("user_id", userId);
+            }
+          } catch (dbSyncErr) {
+            console.warn("supabaseAdmin profile update notice:", dbSyncErr);
           }
 
           await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {

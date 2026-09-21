@@ -89,6 +89,33 @@ export function saveActiveChatId(id: string, userId?: string | null): void {
   }
 }
 
+export function clearAllChatLocalStorage(): void {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (
+        k &&
+        (k.startsWith('nikilow_chats_') ||
+          k.startsWith('nikilow_active_chat_') ||
+          k.startsWith('chat_') ||
+          k === 'nikilow_chats_v1' ||
+          k === 'nikilow_active_chat_id' ||
+          k === 'nikilow_chats_guest' ||
+          k === 'nikilow_active_chat_guest' ||
+          k === 'nikilow_active_profile')
+      ) {
+        keysToRemove.push(k);
+      }
+    }
+    for (const k of keysToRemove) {
+      localStorage.removeItem(k);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export function clearSavedSessions(userId?: string | null): void {
   try {
     localStorage.removeItem(STORAGE_CHATS_KEY);
@@ -105,26 +132,7 @@ export function clearSavedSessions(userId?: string | null): void {
       localStorage.removeItem(`nikilow_user_likes_${userId}`);
     }
 
-    // Sweep any and all stored chat session keys to guarantee zero chat leakage between accounts or after logout
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (
-          k &&
-          (k.startsWith('nikilow_chats_') ||
-            k.startsWith('nikilow_active_chat_') ||
-            k === 'nikilow_active_profile')
-        ) {
-          keysToRemove.push(k);
-        }
-      }
-      for (const k of keysToRemove) {
-        localStorage.removeItem(k);
-      }
-    } catch {
-      // ignore
-    }
+    clearAllChatLocalStorage();
 
     localStorage.removeItem('nikilow_feed_posts_cache');
     localStorage.removeItem('nikilow_feed_posts_v2');

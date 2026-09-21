@@ -153,22 +153,13 @@ export const Sidebar: FC<SidebarProps> = ({
               )}
             </div>
             <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-1">
-              {isDatingThisUser ? (
+              {personality.relationshipStatus === 'dating' ? (
                 <span className="text-rose-500 flex items-center gap-1 font-medium">
                   <Heart size={10} className="fill-rose-500 text-rose-500 shrink-0" />
-                  dating @{userProfile?.username || 'you'}
+                  dating
                 </span>
-              ) : personality.relationshipStatus === 'custom' && personality.partnerName ? (
-                <span className="text-rose-500 flex items-center gap-1 font-medium">
-                  <Heart size={10} className="fill-rose-500 text-rose-500 shrink-0" />
-                  dating {personality.partnerName}
-                </span>
-              ) : personality.relationshipStatus === 'friends' ? (
-                <span>best friends</span>
-              ) : personality.relationshipStatus === 'single' ? (
-                <span>single</span>
               ) : (
-                <span>companion</span>
+                <span>friends</span>
               )}
             </div>
           </div>

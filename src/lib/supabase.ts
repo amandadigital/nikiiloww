@@ -6,6 +6,7 @@ import {
   Post,
   NIKILOW_AVATAR,
   CompanionPersonality,
+  ProfileDecorations,
 } from '../types';
 import { getPostRateLimitStatus, recordPostTimestamp } from '../utils/rateLimit';
 
@@ -225,6 +226,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
           avatar_url: srvData.profile.avatar_url || '',
           bio: srvData.profile.bio || '',
           is_verified: isKodewt || srvData.profile.is_verified,
+          decorations: srvData.profile.decorations || undefined,
           companion_personality: companion,
           companion_name: companion?.name,
           companion_prompt: companion?.prompt,
@@ -269,6 +271,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
           avatar_url: data.avatar_url || '',
           bio: data.bio || '',
           is_verified: isKodewt || data.is_verified,
+          decorations: data.decorations || undefined,
           companion_personality: companion,
           companion_name: companion?.name,
           companion_prompt: companion?.prompt,
@@ -301,7 +304,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
       const meta = sessionUser.user_metadata || {};
       const companion = parseCompanionPersonality(meta);
 
-      const profile: UserProfile = {
+        const profile: UserProfile = {
         id: sessionUser.id,
         name: meta.name || sessionUser.email?.split('@')[0] || 'Anonymous',
         username: meta.username || sessionUser.email?.split('@')[0] || 'user',
@@ -309,6 +312,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
         avatar_url: meta.avatar_url || '',
         bio: meta.bio || '',
         is_verified: meta.username?.toLowerCase() === 'kodewt',
+        decorations: meta.decorations || undefined,
         companion_personality: companion,
         companion_name: companion?.name,
         companion_prompt: companion?.prompt,
@@ -496,6 +500,7 @@ export async function updateUserProfile(
     username?: string;
     avatar_url?: string;
     bio?: string;
+    decorations?: ProfileDecorations;
   }
 ) {
   // 1. Get current authenticated user
@@ -515,7 +520,7 @@ export async function updateUserProfile(
   const authToken = sessionData?.session?.access_token || '';
   const isUuid = UUID_REGEX.test(targetId);
 
-  const safeUpdates: Record<string, string> = {
+  const safeUpdates: Record<string, any> = {
     updated_at: new Date().toISOString(),
   };
 
@@ -527,6 +532,9 @@ export async function updateUserProfile(
     safeUpdates.avatar_url = updates.avatar_url;
   }
   if (updates.bio !== undefined) safeUpdates.bio = updates.bio.trim();
+  if (updates.decorations !== undefined) {
+    safeUpdates.decorations = updates.decorations;
+  }
 
   // 2. Persist to server backend API immediately (guaranteed durable storage)
   try {
@@ -599,11 +607,14 @@ export async function updateUserProfile(
   // 5. Sync author info to user's posts in Supabase
   if (isUuid) {
     try {
-      const postUpdates: Record<string, string> = {};
+      const postUpdates: Record<string, any> = {};
       if (safeUpdates.name) postUpdates.author_name = safeUpdates.name;
       if (safeUpdates.username) postUpdates.author_username = safeUpdates.username;
       if (safeUpdates.avatar_url && safeUpdates.avatar_url.length < 35000) {
         postUpdates.author_avatar = safeUpdates.avatar_url;
+      }
+      if (safeUpdates.decorations) {
+        postUpdates.decorations = safeUpdates.decorations;
       }
 
       if (Object.keys(postUpdates).length > 0) {
@@ -902,6 +913,18 @@ export async function resendVerificationEmail(email: string) {
 export async function fetchUserLikedPostIds(userId: string): Promise<string[]> {
   if (!userId) return [];
 
+  // Instant local cache check for zero-latency like status
+  let cachedLikes: string[] = [];
+  try {
+    const cached = localStorage.getItem(`nikilow_user_likes_${userId}`);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) {
+        cachedLikes = parsed;
+      }
+    }
+  } catch {}
+
   // 1. Try server endpoint
   try {
     const res = await fetch(`/api/posts?action=likes&userId=${encodeURIComponent(userId)}`);
@@ -938,13 +961,9 @@ export async function fetchUserLikedPostIds(userId: string): Promise<string[]> {
     console.warn('fetchUserLikedPostIds client notice:', err);
   }
 
-  // 3. Fallback to cached likes
-  try {
-    const cached = localStorage.getItem(`nikilow_user_likes_${userId}`);
-    if (cached) {
-      return JSON.parse(cached);
-    }
-  } catch {}
+  if (cachedLikes.length > 0) {
+    return cachedLikes;
+  }
 
   return getStoredUserLikes();
 }
@@ -965,14 +984,18 @@ export async function fetchFeedPosts(currentUserId?: string): Promise<Post[]> {
 
   // 1. Try fetching from /api/posts endpoint (reliable serverless function)
   try {
-    const res = await fetch('/api/posts');
+    const url = currentUserId
+      ? `/api/posts?userId=${encodeURIComponent(currentUserId)}`
+      : '/api/posts';
+    const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data?.posts)) {
         dbPostsList = data.posts.map((p: any) => ({
           ...p,
-          isLiked: userLikes.includes(p.id),
+          isLiked: typeof p.isLiked === 'boolean' ? (p.isLiked || userLikes.includes(p.id)) : userLikes.includes(p.id),
           isVerified: p.isVerified || p.authorUsername?.toLowerCase() === 'kodewt',
+          decorations: p.decorations || undefined,
         }));
       }
     }
@@ -993,7 +1016,8 @@ export async function fetchFeedPosts(currentUserId?: string): Promise<Post[]> {
             name,
             username,
             avatar_url,
-            is_verified
+            is_verified,
+            decorations
           )
         `)
         .order('created_at', { ascending: false });
@@ -1018,6 +1042,7 @@ export async function fetchFeedPosts(currentUserId?: string): Promise<Post[]> {
             authorUsername?.toLowerCase() === 'kodewt' ||
             authorUsername?.toLowerCase() === '@kodewt';
           const isVerified = Boolean(profile?.is_verified ?? p.is_verified) || isKodewt;
+          const decorations = profile?.decorations || p.decorations || undefined;
 
           return {
             id: p.id,
@@ -1030,6 +1055,7 @@ export async function fetchFeedPosts(currentUserId?: string): Promise<Post[]> {
             likesCount: p.likes_count || 0,
             isLiked: userLikes.includes(p.id),
             isVerified,
+            decorations,
           };
         });
       }
@@ -1105,6 +1131,7 @@ export async function createFeedPost(
     likesCount: 0,
     isLiked: false,
     isVerified: isKodewt || Boolean(userProfile.is_verified),
+    decorations: userProfile.decorations,
   };
 
   // 1. Try saving to server API endpoint (bypasses RLS issues via service role)
@@ -1120,6 +1147,7 @@ export async function createFeedPost(
         authorUsername: newPost.authorUsername,
         authorAvatar: newPost.authorAvatar,
         isVerified: newPost.isVerified,
+        decorations: userProfile.decorations,
       }),
     });
 
@@ -1128,6 +1156,9 @@ export async function createFeedPost(
       if (data?.post?.id) {
         newPost.id = data.post.id;
         newPost.createdAt = data.post.createdAt || postTime;
+        if (data.post.decorations) {
+          newPost.decorations = data.post.decorations;
+        }
         savedToBackend = true;
       }
     }
@@ -1138,17 +1169,22 @@ export async function createFeedPost(
   // 2. Fallback to direct client insert if API did not save
   if (!savedToBackend) {
     try {
+      const insertRow: Record<string, any> = {
+        user_id: userProfile.id,
+        author_name: newPost.authorName,
+        author_username: newPost.authorUsername,
+        author_avatar: newPost.authorAvatar,
+        content: newPost.content,
+        likes_count: 0,
+        is_verified: newPost.isVerified,
+      };
+      if (userProfile.decorations) {
+        insertRow.decorations = userProfile.decorations;
+      }
+
       const { data, error } = await supabase
         .from('posts')
-        .insert({
-          user_id: userProfile.id,
-          author_name: newPost.authorName,
-          author_username: newPost.authorUsername,
-          author_avatar: newPost.authorAvatar,
-          content: newPost.content,
-          likes_count: 0,
-          is_verified: newPost.isVerified,
-        })
+        .insert(insertRow)
         .select()
         .single();
 
@@ -1340,7 +1376,7 @@ export async function fetchProfileByUsername(
   const cleanUsername = username.trim().toLowerCase().replace(/^@/, '');
 
   // Companion profile view is disabled as personality is customizable
-  if (cleanUsername === 'nikilow') {
+  if (cleanUsername === 'nikilow' || cleanUsername === 'niki' || cleanUsername === 'dary') {
     return null;
   }
 
@@ -1363,6 +1399,7 @@ export async function fetchProfileByUsername(
           avatar_url: data.avatar_url || '',
           bio: data.bio || '',
           is_verified: true,
+          decorations: data.decorations || undefined,
         };
       }
     } catch {
@@ -1396,6 +1433,7 @@ export async function fetchProfileByUsername(
         avatar_url: data.avatar_url || '',
         bio: data.bio || '',
         is_verified: cleanUsername === 'kodewt' || data.is_verified,
+        decorations: data.decorations || undefined,
       };
     }
   } catch (err) {

@@ -19,7 +19,6 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
   wallpaperSettings,
   onUpdateWallpaper,
 }) => {
-  const [customInputUrl, setCustomInputUrl] = useState(wallpaperSettings.customUrl || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -46,17 +45,6 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
     const updated: ChatWallpaperSettings = {
       ...wallpaperSettings,
       blur: val,
-    };
-    onUpdateWallpaper(updated);
-    saveWallpaperSettings(updated);
-  };
-
-  const handleApplyCustomUrl = () => {
-    if (!customInputUrl.trim()) return;
-    const updated: ChatWallpaperSettings = {
-      ...wallpaperSettings,
-      id: 'custom',
-      customUrl: customInputUrl.trim(),
     };
     onUpdateWallpaper(updated);
     saveWallpaperSettings(updated);
@@ -92,7 +80,6 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
       opacity: 0.35,
       blur: 3,
     };
-    setCustomInputUrl('');
     onUpdateWallpaper(resetSettings);
     saveWallpaperSettings(resetSettings);
   };
@@ -182,47 +169,26 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
             </div>
           </div>
 
-          {/* Custom Upload or URL */}
-          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 lowercase">
-                upload your own
-              </span>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium transition"
-              >
-                <Upload size={12} />
-                <span>upload image</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={customInputUrl}
-                  onChange={(e) => setCustomInputUrl(e.target.value)}
-                  placeholder="or paste image url..."
-                  className="w-full text-xs rounded-xl bg-white dark:bg-[#151922] border border-gray-200 dark:border-gray-700/80 py-2 pl-3 pr-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-rose-500 font-mono transition"
-                />
-              </div>
-              <button
-                onClick={handleApplyCustomUrl}
-                disabled={!customInputUrl.trim()}
-                className="px-3 py-2 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-medium disabled:opacity-40 transition"
-              >
-                apply
-              </button>
-            </div>
+          {/* Custom Upload */}
+          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 lowercase">
+              upload custom image
+            </span>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium transition cursor-pointer"
+            >
+              <Upload size={12} />
+              <span>upload image</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
           </div>
 
           {/* Sliders: Opacity & Blur */}

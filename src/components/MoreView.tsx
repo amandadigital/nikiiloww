@@ -181,7 +181,7 @@ export const MoreView: FC<MoreViewProps> = ({
           </div>
 
           <p className="text-xs text-gray-300">
-            join our discord to chat with @misiori, request features, share custom prompts, and meet other companions.
+            join our discord to chat with @misiori, request features, share custom prompts, and meet other members.
           </p>
 
           <div className="flex items-center gap-2 pt-1">

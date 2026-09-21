@@ -32,6 +32,7 @@ import {
   loadActiveChatId,
   saveActiveChatId,
   clearSavedSessions,
+  clearAllChatLocalStorage,
   loadSavedTheme,
   saveTheme,
   createNewSession,
@@ -313,7 +314,10 @@ export default function App() {
       }
 
       // ================= USER LOGGED IN =================
-      // 1. Wipe previous user's chats and state so they never bleed into this account
+      // 1. Wipe previous user's chats and state immediately so they never bleed into this account
+      const cleanSession = createNewSession();
+      setSessions([cleanSession]);
+      setActiveSessionId(cleanSession.id);
       clearSavedSessions(prevUserId || undefined);
 
       // 2. Fetch profile
@@ -343,7 +347,7 @@ export default function App() {
         saveSessions(sorted, newUserId);
         setActiveSessionId(sorted[0].id);
       } else {
-        // Check offline cache for this specific user if any
+        // Check offline cache exclusively for this specific user if any
         const cachedUserChats = loadSavedSessions(newUserId);
         if (cachedUserChats.length > 0) {
           setSessions(cachedUserChats);
@@ -536,6 +540,14 @@ export default function App() {
     const now = Date.now();
     const tempId = 'post_' + now + '_' + Math.random().toString(36).substring(2, 6);
     const isKodewt = userProfile.username.toLowerCase() === 'kodewt';
+    const isVerifiedUser = isKodewt || Boolean(userProfile.is_verified);
+    const sanitizedDeco = userProfile.decorations
+      ? {
+          ...userProfile.decorations,
+          badge: isVerifiedUser ? userProfile.decorations.badge !== false : false,
+        }
+      : undefined;
+
     const optimisticPost: Post = {
       id: tempId,
       userId: userProfile.id,
@@ -546,7 +558,8 @@ export default function App() {
       createdAt: now,
       likesCount: 0,
       isLiked: false,
-      isVerified: isKodewt || Boolean(userProfile.is_verified),
+      isVerified: isVerifiedUser,
+      decorations: sanitizedDeco,
     };
 
     // 1. Instant visual display
@@ -650,6 +663,7 @@ export default function App() {
             authorUsername: updated.username,
             authorAvatar: updated.avatar_url,
             isVerified: updated.username === 'kodewt' || updated.is_verified,
+            decorations: updated.decorations,
           };
         }
         return p;
@@ -660,6 +674,7 @@ export default function App() {
   // Sign out handler
   const handleSignOut = async () => {
     handleStopStreaming();
+    clearAllChatLocalStorage();
     await supabase.auth.signOut();
     await handleAuthUserSwitch(null);
   };

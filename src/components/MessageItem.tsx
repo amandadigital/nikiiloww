@@ -1,6 +1,6 @@
 import { FC, useState } from 'react';
 import { motion } from 'motion/react';
-import { Copy, Check, User, RefreshCw } from 'lucide-react';
+import { Copy, Check, User, RefreshCw, ShieldAlert } from 'lucide-react';
 import { Message, DEFAULT_NIKILOW_AVATAR } from '../types';
 import { renderMentions } from '../utils/mentions';
 import { VerifiedBadge } from './VerifiedBadge';
@@ -51,9 +51,12 @@ export const MessageItem: FC<MessageItemProps> = ({
 
   const resolvedCompanionAvatar = companionAvatar || DEFAULT_NIKILOW_AVATAR;
   const resolvedCompanionName = companionName || 'nikilow';
+  const isSafetyViolation =
+    !isUser && message.content.includes('You are violating our rules.');
   const hasErrorIndication =
     !isUser &&
-    (message.content.includes('glitch') ||
+    (isSafetyViolation ||
+      message.content.includes('glitch') ||
       message.content.includes('error') ||
       message.content.includes('notice') ||
       message.content.includes('limit') ||
@@ -98,13 +101,29 @@ export const MessageItem: FC<MessageItemProps> = ({
           className={`relative px-4 py-2.5 rounded-2xl text-sm leading-relaxed tracking-normal whitespace-pre-wrap select-text transition-all duration-200 ${
             isUser
               ? 'chat-bubble-user rounded-tr-xs shadow-xs'
+              : isSafetyViolation
+              ? 'chat-bubble-companion rounded-tl-xs shadow-xs border border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300 font-medium'
               : 'chat-bubble-companion rounded-tl-xs shadow-xs'
           }`}
           style={{
-            backgroundColor: isUser ? 'var(--accent)' : 'var(--companion-msg-bg)',
-            borderColor: isUser ? undefined : 'var(--border-color)',
+            backgroundColor: isUser
+              ? 'var(--accent)'
+              : isSafetyViolation
+              ? undefined
+              : 'var(--companion-msg-bg)',
+            borderColor: isUser
+              ? undefined
+              : isSafetyViolation
+              ? undefined
+              : 'var(--border-color)',
           }}
         >
+          {isSafetyViolation && (
+            <div className="flex items-center gap-1.5 mb-1 text-xs font-semibold text-rose-600 dark:text-rose-400">
+              <ShieldAlert size={14} className="shrink-0" />
+              <span>Safety policy</span>
+            </div>
+          )}
           {renderMentions(message.content, onMentionClick)}
           {isStreaming && (
             <span className="inline-block w-1.5 h-4 ml-1 bg-gray-400 dark:bg-gray-500 animate-pulse align-middle" />

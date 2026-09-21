@@ -19,13 +19,15 @@ create table if not exists public.profiles (
   companion_personality jsonb,
   companion_relationship_status text default 'dating_user',
   companion_partner_name text,
+  decorations jsonb default '{}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- In case profiles table already exists, safely add the companion personality columns
+-- In case profiles table already exists, safely add companion and decoration columns
 alter table public.profiles
-  add column if not exists companion_name text default 'nikilow',
+  add column if not exists decorations jsonb default '{}'::jsonb,
+  add column if not exists companion_name text default 'dary',
   add column if not exists companion_prompt text,
   add column if not exists companion_avatar_url text,
   add column if not exists companion_personality jsonb,
@@ -197,8 +199,12 @@ create table if not exists public.posts (
   content text not null check (char_length(content) <= 300),
   likes_count integer default 0,
   is_verified boolean default false,
+  decorations jsonb default '{}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.posts
+  add column if not exists decorations jsonb default '{}'::jsonb;
 
 create index if not exists idx_posts_created_at on public.posts (created_at desc);
 create index if not exists idx_posts_user_id on public.posts (user_id);
@@ -252,3 +258,28 @@ $$;
 
 grant execute on function public.increment_post_likes(text) to anon, authenticated;
 grant execute on function public.decrement_post_likes(text) to anon, authenticated;
+
+-- 10. Auto-sync Profile Decorations to User's Feed Posts
+create or replace function public.sync_profile_decorations_to_posts()
+returns trigger language plpgsql security definer as $$
+begin
+  if new.decorations is distinct from old.decorations then
+    update public.posts
+    set decorations = new.decorations
+    where user_id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_profile_decorations_updated on public.profiles;
+create trigger on_profile_decorations_updated
+  after update on public.profiles
+  for each row execute function public.sync_profile_decorations_to_posts();
+
+-- 11. Table Access Grants
+grant select, insert, update on public.profiles to anon, authenticated;
+grant select, insert, update, delete on public.posts to anon, authenticated;
+grant select, insert, delete on public.post_likes to anon, authenticated;
+grant select, insert, update, delete on public.chats to anon, authenticated;
+grant select, insert, update, delete on public.messages to anon, authenticated;

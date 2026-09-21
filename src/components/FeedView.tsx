@@ -147,7 +147,12 @@ export const FeedView: FC<FeedViewProps> = ({
         recordPost();
       })
       .catch((err: unknown) => {
-        setError((err as Error)?.message?.toLowerCase() || 'failed to post');
+        const rawMsg = (err as Error)?.message || 'failed to post';
+        if (rawMsg.toLowerCase().includes('violating our rules')) {
+          setError('You are violating our rules.');
+        } else {
+          setError(rawMsg.toLowerCase());
+        }
       })
       .finally(() => {
         setIsSubmitting(false);

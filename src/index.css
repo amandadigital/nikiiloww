@@ -221,3 +221,138 @@
   background: rgba(150, 150, 150, 0.4);
 }
 
+/* Profile Name Custom Fonts */
+.font-sora {
+  font-family: 'Sora', sans-serif;
+}
+.font-manrope {
+  font-family: 'Manrope', sans-serif;
+}
+.font-bricolage {
+  font-family: 'Bricolage Grotesque', sans-serif;
+}
+.font-syne-mono {
+  font-family: 'Syne Mono', monospace;
+}
+.font-handdrawn {
+  font-family: 'Architects Daughter', cursive;
+}
+
+/* 3-second Profile Avatar Decoration Animations */
+@keyframes deco-moon-orbit {
+  0% {
+    transform: rotate(0deg) translateY(-22px) rotate(0deg) scale(0.95);
+    filter: drop-shadow(0 0 6px rgba(253, 224, 71, 0.7));
+  }
+  50% {
+    transform: rotate(180deg) translateY(-22px) rotate(-180deg) scale(1.1);
+    filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.95));
+  }
+  100% {
+    transform: rotate(360deg) translateY(-22px) rotate(-360deg) scale(0.95);
+    filter: drop-shadow(0 0 6px rgba(253, 224, 71, 0.7));
+  }
+}
+
+@keyframes deco-moon-halo {
+  0%, 100% {
+    box-shadow: 0 0 14px 2px rgba(250, 204, 21, 0.35), inset 0 0 10px rgba(250, 204, 21, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 22px 5px rgba(250, 204, 21, 0.65), inset 0 0 16px rgba(250, 204, 21, 0.4);
+  }
+}
+
+@keyframes deco-cat-ear-left {
+  0%, 100% {
+    transform: rotate(-12deg) scale(1);
+  }
+  15% {
+    transform: rotate(-22deg) scale(1.08);
+  }
+  30% {
+    transform: rotate(-10deg) scale(0.98);
+  }
+  45% {
+    transform: rotate(-18deg) scale(1.05);
+  }
+  60% {
+    transform: rotate(-12deg) scale(1);
+  }
+}
+
+@keyframes deco-cat-ear-right {
+  0%, 100% {
+    transform: rotate(12deg) scale(1);
+  }
+  20% {
+    transform: rotate(24deg) scale(1.08);
+  }
+  35% {
+    transform: rotate(10deg) scale(0.98);
+  }
+  50% {
+    transform: rotate(20deg) scale(1.05);
+  }
+  65% {
+    transform: rotate(12deg) scale(1);
+  }
+}
+
+@keyframes deco-clouds-float-1 {
+  0%, 100% {
+    transform: translate(-10px, 4px) scale(0.95);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate(12px, -3px) scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes deco-clouds-float-2 {
+  0%, 100% {
+    transform: translate(12px, -4px) scale(1.05);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(-10px, 3px) scale(0.95);
+    opacity: 0.75;
+  }
+}
+
+.animate-deco-moon {
+  animation: deco-moon-orbit 3s linear infinite;
+}
+
+.animate-deco-moon-ring {
+  animation: deco-moon-halo 3s ease-in-out infinite;
+}
+
+.animate-deco-ear-left {
+  transform-origin: bottom center;
+  animation: deco-cat-ear-left 3s ease-in-out infinite;
+}
+
+.animate-deco-ear-right {
+  transform-origin: bottom center;
+  animation: deco-cat-ear-right 3s ease-in-out infinite;
+}
+
+.animate-deco-cloud-1 {
+  animation: deco-clouds-float-1 3s ease-in-out infinite;
+}
+
+.animate-deco-cloud-2 {
+  animation: deco-clouds-float-2 3s ease-in-out infinite;
+}
+
+/* Static Accent Color Ring (Non-pulsing, steady clean halo) */
+.animate-deco-pulse-single,
+.animate-deco-pulse-wave,
+.animate-deco-pulse-outer {
+  animation: none !important;
+}
+
+
+
