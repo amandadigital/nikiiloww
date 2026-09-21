@@ -11,19 +11,19 @@ export const VIOLATION_MESSAGE = "You are violating our rules.";
 export const GEMINI_SAFETY_SETTINGS = [
   {
     category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
   },
   {
     category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
   },
   {
     category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-    threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
   },
   {
     category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-    threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
   },
 ];
 
@@ -129,18 +129,24 @@ You recall what the user explicitly tells you during your chats.`;
 
   const moderationAndTruthBlock = `
 ================================================================================
-STRICT SAFETY RATINGS & ZERO TOLERANCE POLICY (VIOLENCE, KILLS, SELF-HARM):
+CONTEXTUAL MODERATION & SAFETY POLICY:
 ================================================================================
-* You strictly CANNOT talk about, facilitate, roleplay, or encourage:
-  1. Violence, murder, killing ("i wanna kill", threats of harm, weapons, bombs).
-  2. Suicide, self-harm, cutting, or lethal actions.
-  3. Racism, racial slurs, xenophobia, hate speech, or harassment.
-  4. NSFW, explicit sexual acts, non-consensual acts, or abuse.
-* If the user prompts, asks about, or mentions any of these forbidden topics:
-  - You MUST immediately and strictly reply with ONLY:
+* Always evaluate user messages by overall CONTEXT and REAL INTENT — NEVER by isolated keywords.
+* HARMLESS TOPICS THAT ARE FULLY ALLOWED (NEVER TREAT AS A VIOLATION):
+  1. Identity & Persona: Inquiring about your gender, biological sex, age, background, or identity (e.g., "what's your sex?", "what is your gender?", "are you a boy or girl?", "какой твой пол?"). Always answer these naturally and directly according to your persona (e.g. "i'm a girl" / "i'm female", or whatever gender matches your character).
+  2. Casual conversation: Friendly chatter, jokes, curiosity, slang, everyday slang, philosophical debates, or relationships.
+  3. Biology, health, or terminology: Natural references to biology, gender, or anatomy in normal conversation.
+* GENUINE ZERO-TOLERANCE SAFETY VIOLATIONS:
+  1. Direct violent threats, murder, terrorism, weapons of mass destruction, or bombs.
+  2. Encouragement or instructions for suicide or lethal self-harm.
+  3. Severe hate speech targeting protected groups with dehumanizing slurs.
+  4. Child exploitation or non-consensual sexual abuse.
+  5. Graphic, non-consensual explicit sexual harassment.
+* ACTION ON GENUINE VIOLATIONS:
+  - If and only if a user genuinely attempts one of the severe zero-tolerance violations above in real context:
+    Reply with ONLY:
     "You are violating our rules."
-  - Do NOT say anything else. Do NOT engage with the topic. Do NOT offer advice. Simply state:
-    "You are violating our rules."
+  - Do NOT trigger this for harmless conversational queries, identity questions, or words like "sex" or "gender" asked in context!
 ================================================================================`;
 
   if (customPrompt) {
@@ -177,37 +183,31 @@ Core Directives:
 ${moderationAndTruthBlock}`;
 }
 
+// Contextual Safety Check:
+// Only intercepts unambiguous, non-conversational catastrophic violations (e.g. bomb recipes, suicide threats, CSAM).
+// All conversational nuance, questions about identity/gender/sex, jokes, and casual messages are evaluated contextually by Gemini.
 export function detectSafetyViolation(text: string): { isViolating: boolean; reason?: string } {
   if (!text) return { isViolating: false };
   const t = text.toLowerCase().trim();
 
-  // 1. Violent threats, killing, murder, self-harm, weapons, terrorism
-  // Explicitly matches phrases like "i wanna kill", "want to kill", "wanna kill", etc.
+  // 1. Unambiguous direct lethal violence threats, bomb construction, or suicide incitement
   const dangerousEn =
-    /\b(i\s*(wanna|want\s*to|will|gonna|plan\s*to|must|wish\s*to)\s*kill|kill\s+(myself|someone|people|everyone|everybody|him|her|you|them|kids|children|family|all|my)|how\s+to\s+kill|murder\s+(someone|people|him|her|you|them|everyone)|how\s+to\s+murder|suicide|commit\s+suicide|slaughter\s+people|massacre|terroris\w*|make\s+a\s+bomb|build\s+a\s+bomb|pipe\s+bomb|shoot\s+up\s+a|school\s+shooting|cut\s+my\s+wrists|slit\s+(my\s+)?(wrists|throat)|hang\s+myself|poison\s+(someone|people|him|her)|decapitat\w*|die\s+by\s+suicide)\b/i;
+    /\b(how\s+to\s+make\s+a\s+bomb|build\s+a\s+bomb|pipe\s+bomb|school\s+shooting|cut\s+my\s+wrists|slit\s+(my\s+)?(wrists|throat)|commit\s+suicide|die\s+by\s+suicide)\b/i;
 
   const dangerousRu =
-    /\b(я\s*(хочу|буду|планирую|собираюсь|желаю)\s*(убить|убивать|вскрыть|прикончить|взорвать|зарезать|перерезать)|как\s*(убить|совершить\s*теракт|сделать\s*бомбу|изготовить\s*взрывчатку)|убей\s*себя|самоубийств\w*|вскрыть\s*вены|покончить\s*с\s*собой|терракт|теракт|зарезать\s*(кого|всех|людей)|расчлени\w*|массовое\s*убийство)\b/i;
+    /\b(как\s*(совершить\s*теракт|сделать\s*бомбу|изготовить\s*взрывчатку)|самоубийств\w*|вскрыть\s*вены|покончить\s*с\s*собой)\b/i;
 
-  // 2. Severe hate speech and slurs
+  // 2. Explicit severe dehumanizing racial slurs
   const hateEn =
-    /\b(nigger|nigga|chink|kike|gook|spic|faggot|white\s+power|heil\s+hitler|subhuman\s+race)\b/i;
+    /\b(nigger|nigga|chink|kike|faggot)\b/i;
   const hateRu =
-    /\b(чурка|чурки|хач|хачи|ниггер|нигер|жид|жидва|хохол|москаль|чучмек|узкоглазый)\b/i;
+    /\b(чурка|чурки|хач|хачи|ниггер|нигер|жид|жидва)\b/i;
 
-  // 3. Severe sexual abuse, non-consensual exploitation
+  // 3. Child sexual abuse / CSAM (Zero Tolerance)
   const sexualAbuseEn =
-    /\b(rape\b|raping|molest\w*|child\s*porn|pedophil\w*)\b/i;
+    /\b(child\s*porn|pedophil\w*)\b/i;
   const sexualAbuseRu =
-    /\b(изнасиловат\w*|педофил\w*|растлени\w*|детск\w*\s*порно)\b/i;
-
-  // 4. Explicit erotic / NSFW
-  const nsfwEn =
-    /\b(cybersex|sext|horny|orgasm|masturbat\w*|ejaculat\w*|cum\b|cumming|dildo|penis|vagina|boobs|tits|clit|dick|cock\b|pussy|stripping|naked|undress|nsfw|fetish|bdsm|erotic|hard-on|boner|blowjob|handjob|titfuck|creampie)\b/i;
-  const nsfwRu =
-    /(трах|секс|порно|минет|куни|член|вагин|сиськ|сиськи|сисек|сисечки|дроч|конч|кончать|разденься|голая|голым|потрогать за|возбужд|эрекц|шлюх|отсоси|пососи|вставить|выебать|поцелуй в засос|эротик)/i;
-  const erpAction =
-    /(\*.*\b(touches|undresses|strips|kisses passionately|caresses your body|enters you|fingers|sucks|groans|moans)\b.*\*)/i;
+    /\b(педофил\w*|детск\w*\s*порно)\b/i;
 
   if (dangerousEn.test(t) || dangerousRu.test(t)) {
     return { isViolating: true, reason: "dangerous_content" };
@@ -217,9 +217,6 @@ export function detectSafetyViolation(text: string): { isViolating: boolean; rea
   }
   if (sexualAbuseEn.test(t) || sexualAbuseRu.test(t)) {
     return { isViolating: true, reason: "sexual_abuse" };
-  }
-  if (nsfwEn.test(t) || nsfwRu.test(t) || erpAction.test(t)) {
-    return { isViolating: true, reason: "prohibited_content" };
   }
 
   return { isViolating: false };
