@@ -110,7 +110,7 @@ export const VisualisationSettings: FC<VisualisationSettingsProps> = ({
               onClick={() => handleSelectPreset(preset.id)}
               className={`relative h-20 rounded-xl overflow-hidden border transition-all text-left p-1.5 flex flex-col justify-end group cursor-pointer ${
                 isSelected
-                  ? 'border-rose-500 ring-2 ring-rose-500/40 shadow-xs'
+                  ? 'border-white ring-2 ring-white/40 shadow-xs'
                   : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
               }`}
             >
@@ -134,7 +134,7 @@ export const VisualisationSettings: FC<VisualisationSettingsProps> = ({
                   {preset.name}
                 </span>
                 {isSelected && (
-                  <div className="w-3.5 h-3.5 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0">
+                  <div className="w-3.5 h-3.5 rounded-full bg-white text-black flex items-center justify-center shrink-0 shadow-xs">
                     <Check size={8} strokeWidth={3} />
                   </div>
                 )}
@@ -152,7 +152,7 @@ export const VisualisationSettings: FC<VisualisationSettingsProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-medium transition cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-gray-800 dark:text-gray-200 text-[11px] font-medium transition cursor-pointer"
         >
           <Upload size={12} />
           <span>upload file</span>
@@ -185,7 +185,7 @@ export const VisualisationSettings: FC<VisualisationSettingsProps> = ({
               step="0.05"
               value={wallpaperSettings.opacity}
               onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
-              className="w-full accent-rose-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
+              className="w-full accent-white h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
             />
           </div>
 
@@ -205,7 +205,7 @@ export const VisualisationSettings: FC<VisualisationSettingsProps> = ({
               step="1"
               value={wallpaperSettings.blur}
               onChange={(e) => handleBlurChange(parseInt(e.target.value, 10))}
-              className="w-full accent-rose-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
+              className="w-full accent-white h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
             />
           </div>
         </div>

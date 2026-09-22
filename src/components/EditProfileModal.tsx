@@ -84,7 +84,8 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
   // Check if current user is an authentic verified user
   const isVerifiedAccount =
     Boolean(userProfile.is_verified) ||
-    userProfile.username.toLowerCase() === 'kodewt';
+    userProfile.username.toLowerCase() === 'kodewt' ||
+    userProfile.username.toLowerCase() === 'misiori';
 
   // Only verified users have the ability to enable and show the verified badge
   const [badge, setBadge] = useState<boolean>(() => {
@@ -98,7 +99,9 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
 
   const currentUsernameLower = username.toLowerCase().replace(/^@/, '');
   const isUserVerifiedNow =
-    isVerifiedAccount || currentUsernameLower === 'kodewt';
+    isVerifiedAccount ||
+    currentUsernameLower === 'kodewt' ||
+    currentUsernameLower === 'misiori';
 
   const currentDecorations: ProfileDecorations = {
     avatarAnimation,
@@ -187,7 +190,10 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
       username: trimmedUsername,
       bio: bio.trim(),
       avatar_url: avatarUrl,
-      is_verified: trimmedUsername === 'kodewt' || userProfile.is_verified,
+      is_verified:
+        trimmedUsername === 'kodewt' ||
+        trimmedUsername === 'misiori' ||
+        userProfile.is_verified,
       decorations: currentDecorations,
     };
 
@@ -244,7 +250,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
               onClick={() => setActiveSection('info')}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeSection === 'info'
-                  ? 'bg-pink-500 text-white shadow-xs'
+                  ? 'bg-white text-black font-bold shadow-xs'
                   : 'bg-gray-100 dark:bg-gray-800/70 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'
               }`}
             >
@@ -256,7 +262,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
               onClick={() => setActiveSection('deco')}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeSection === 'deco'
-                  ? 'bg-pink-500 text-white shadow-xs'
+                  ? 'bg-white text-black font-bold shadow-xs'
                   : 'bg-gray-100 dark:bg-gray-800/70 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'
               }`}
             >
@@ -308,7 +314,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-xs text-pink-500 hover:underline font-medium cursor-pointer"
+                    className="text-xs text-white hover:underline font-medium cursor-pointer"
                   >
                     upload new photo
                   </button>
@@ -326,7 +332,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                     placeholder="your name"
                     maxLength={40}
                     required
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-pink-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-white"
                   />
                 </div>
 
@@ -337,7 +343,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                       username
                     </label>
                     {isUserVerifiedNow && (
-                      <span className="flex items-center gap-1 text-[11px] text-pink-500 font-medium">
+                      <span className="flex items-center gap-1 text-[11px] text-white font-medium">
                         <VerifiedBadge size="sm" />
                         <span>verified badge</span>
                       </span>
@@ -352,7 +358,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                       placeholder="username"
                       maxLength={30}
                       required
-                      className="w-full pl-7 pr-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-pink-500"
+                      className="w-full pl-7 pr-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-white"
                     />
                   </div>
                 </div>
@@ -368,7 +374,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                     placeholder="write something about yourself..."
                     maxLength={160}
                     rows={3}
-                    className="w-full p-3 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-pink-500 resize-none"
+                    className="w-full p-3 rounded-xl bg-gray-50 dark:bg-[#181d26] border border-gray-200/90 dark:border-gray-800 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-white resize-none"
                   />
                   <span className="text-[10px] text-gray-400 float-right">
                     {bio.length}/160
@@ -441,7 +447,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                       onClick={() => setAvatarAnimation('none')}
                       className={`p-2.5 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer border ${
                         avatarAnimation === 'none'
-                          ? 'bg-pink-500/15 border-pink-500 text-pink-600 dark:text-pink-400 font-semibold'
+                          ? 'bg-white/15 border-white text-white font-semibold'
                           : 'bg-gray-50 dark:bg-[#181d26] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
                       }`}
                     >
@@ -478,7 +484,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                       onClick={() => setAvatarAnimation('cat_ears')}
                       className={`p-2.5 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer border ${
                         avatarAnimation === 'cat_ears'
-                          ? 'bg-pink-500/15 border-pink-400 text-pink-500 font-semibold shadow-xs'
+                          ? 'bg-white/15 border-white/60 text-white font-semibold shadow-xs'
                           : 'bg-gray-50 dark:bg-[#181d26] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
                       }`}
                     >
@@ -532,7 +538,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                               title={p.name}
                               className={`h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer border relative ${
                                 isSelected
-                                  ? 'ring-2 ring-pink-500 scale-105 border-white shadow-md'
+                                  ? 'ring-2 ring-white scale-105 border-white shadow-md'
                                   : 'border-transparent hover:scale-105 opacity-85 hover:opacity-100'
                               }`}
                               style={{ backgroundColor: p.color }}
@@ -574,7 +580,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                             onClick={() => setNameColor(c)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer border ${
                               isSelected
-                                ? 'bg-white dark:bg-[#1e2430] border-pink-500 shadow-xs ring-1 ring-pink-500/50 font-bold'
+                                ? 'bg-white dark:bg-[#1e2430] border-white shadow-xs ring-1 ring-white/50 font-bold'
                                 : 'bg-white/80 dark:bg-[#181d26] border-gray-200 dark:border-gray-800 hover:border-gray-300'
                             }`}
                           >
@@ -616,7 +622,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                             onClick={() => setNameFont(f)}
                             className={`px-2.5 py-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                               isSelected
-                                ? 'bg-white dark:bg-[#1e2430] border-pink-500 shadow-xs ring-1 ring-pink-500/50 font-semibold'
+                                ? 'bg-white dark:bg-[#1e2430] border-white shadow-xs ring-1 ring-white/50 font-semibold'
                                 : 'bg-white/80 dark:bg-[#181d26] border-gray-200 dark:border-gray-800 hover:border-gray-300'
                             }`}
                           >
@@ -642,7 +648,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                         onClick={() => {
                           setBackgroundValue('');
                         }}
-                        className="text-[11px] text-pink-500 hover:underline cursor-pointer"
+                        className="text-[11px] text-white hover:underline cursor-pointer"
                       >
                         clear background
                       </button>
@@ -665,9 +671,9 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                               setBackgroundType('preset');
                               setBackgroundValue(preset.id);
                             }}
-                            className={`relative h-14 rounded-xl overflow-hidden text-left p-2 flex flex-col justify-end transition-all cursor-pointer border ${
+                              className={`relative h-14 rounded-xl overflow-hidden text-left p-2 flex flex-col justify-end transition-all cursor-pointer border ${
                               isSelected
-                                ? 'ring-2 ring-pink-500 border-transparent shadow-md'
+                                ? 'ring-2 ring-white border-transparent shadow-md'
                                 : 'border-gray-200 dark:border-gray-800 hover:opacity-90'
                             }`}
                           >
@@ -692,7 +698,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                                 {preset.name}
                               </span>
                               {isSelected && (
-                                <CheckCircle2 size={12} className="text-pink-400 shrink-0" />
+                                <CheckCircle2 size={12} className="text-white shrink-0" />
                               )}
                             </div>
                           </button>
@@ -719,7 +725,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                             }}
                             className={`h-10 rounded-xl overflow-hidden p-2 flex items-center justify-between text-white text-xs font-semibold transition-all cursor-pointer border ${
                               isSelected
-                                ? 'ring-2 ring-pink-500 border-white shadow-md'
+                                ? 'ring-2 ring-white border-white shadow-md'
                                 : 'border-transparent hover:opacity-90'
                             }`}
                             style={{ background: col.value }}
@@ -739,7 +745,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                         <label className="text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                           background opacity
                         </label>
-                        <span className="text-xs font-mono font-bold text-pink-500">
+                        <span className="text-xs font-mono font-bold text-white">
                           {backgroundOpacity}%
                         </span>
                       </div>
@@ -750,7 +756,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                         step="5"
                         value={backgroundOpacity}
                         onChange={(e) => setBackgroundOpacity(Number(e.target.value))}
-                        className="w-full accent-pink-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                        className="w-full accent-white cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
                       />
                       <div className="flex justify-between text-[10px] text-gray-400 font-mono">
                         <span>10% (subtle)</span>
@@ -770,7 +776,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-500 flex items-center justify-center shrink-0">
+                    <div className="p-1.5 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0">
                       <VerifiedBadge size="md" />
                     </div>
                     <div>
@@ -797,14 +803,14 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                       type="button"
                       onClick={() => setBadge(!badge)}
                       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                        badge ? 'bg-pink-500' : 'bg-gray-200 dark:bg-gray-700'
+                        badge ? 'bg-white' : 'bg-gray-200 dark:bg-gray-700'
                       }`}
                       role="switch"
                       aria-checked={badge}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                          badge ? 'translate-x-5' : 'translate-x-0'
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full shadow-md ring-0 transition duration-200 ease-in-out ${
+                          badge ? 'translate-x-5 bg-black' : 'translate-x-0 bg-white'
                         }`}
                       />
                     </button>
@@ -828,7 +834,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-white hover:bg-gray-100 text-black text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer"
               >
                 save changes
               </button>

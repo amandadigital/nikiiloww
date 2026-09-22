@@ -1,4 +1,4 @@
-export type AccentColor = 'rose' | 'pink' | 'blue' | 'purple' | 'green';
+export type AccentColor = 'white' | 'rose' | 'pink' | 'blue' | 'purple' | 'green';
 export type BgTheme = 'default' | 'midnight' | 'charcoal' | 'velvet';
 
 export const ACCENT_CONFIG: Record<
@@ -16,41 +16,53 @@ export const ACCENT_CONFIG: Record<
     gradient: string;
   }
 > = {
+  white: {
+    name: 'white',
+    hex: '#ffffff',
+    activeText: 'text-white',
+    bgClass: 'bg-white text-black',
+    hoverBgClass: 'hover:bg-gray-100',
+    borderClass: 'border-white/40',
+    lightSubtleBg: 'bg-white/15 text-white',
+    ringClass: 'focus:ring-white/40 focus:border-white',
+    badgeBg: 'bg-white text-black',
+    gradient: 'from-white to-gray-200',
+  },
   rose: {
-    name: 'rose',
-    hex: '#f43f5e',
-    activeText: 'text-rose-500 dark:text-rose-400',
-    bgClass: 'bg-rose-500 text-white',
-    hoverBgClass: 'hover:bg-rose-600',
-    borderClass: 'border-rose-500/30',
-    lightSubtleBg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-    ringClass: 'focus:ring-rose-500/40 focus:border-rose-500',
-    badgeBg: 'bg-rose-500 text-white',
-    gradient: 'from-rose-500 to-rose-600',
+    name: 'white',
+    hex: '#ffffff',
+    activeText: 'text-white',
+    bgClass: 'bg-white text-black',
+    hoverBgClass: 'hover:bg-gray-100',
+    borderClass: 'border-white/40',
+    lightSubtleBg: 'bg-white/15 text-white',
+    ringClass: 'focus:ring-white/40 focus:border-white',
+    badgeBg: 'bg-white text-black',
+    gradient: 'from-white to-gray-200',
   },
   pink: {
-    name: 'pink',
-    hex: '#ec4899',
-    activeText: 'text-pink-500 dark:text-pink-400',
-    bgClass: 'bg-pink-500 text-white',
-    hoverBgClass: 'hover:bg-pink-600',
-    borderClass: 'border-pink-500/30',
-    lightSubtleBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
-    ringClass: 'focus:ring-pink-500/40 focus:border-pink-500',
-    badgeBg: 'bg-pink-500 text-white',
-    gradient: 'from-pink-500 to-pink-600',
+    name: 'white',
+    hex: '#ffffff',
+    activeText: 'text-white',
+    bgClass: 'bg-white text-black',
+    hoverBgClass: 'hover:bg-gray-100',
+    borderClass: 'border-white/40',
+    lightSubtleBg: 'bg-white/15 text-white',
+    ringClass: 'focus:ring-white/40 focus:border-white',
+    badgeBg: 'bg-white text-black',
+    gradient: 'from-white to-gray-200',
   },
   blue: {
-    name: 'pink',
-    hex: '#ec4899',
-    activeText: 'text-pink-500 dark:text-pink-400',
-    bgClass: 'bg-pink-500 text-white',
-    hoverBgClass: 'hover:bg-pink-600',
-    borderClass: 'border-pink-500/30',
-    lightSubtleBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
-    ringClass: 'focus:ring-pink-500/40 focus:border-pink-500',
-    badgeBg: 'bg-pink-500 text-white',
-    gradient: 'from-pink-500 to-pink-600',
+    name: 'white',
+    hex: '#ffffff',
+    activeText: 'text-white',
+    bgClass: 'bg-white text-black',
+    hoverBgClass: 'hover:bg-gray-100',
+    borderClass: 'border-white/40',
+    lightSubtleBg: 'bg-white/15 text-white',
+    ringClass: 'focus:ring-white/40 focus:border-white',
+    badgeBg: 'bg-white text-black',
+    gradient: 'from-white to-gray-200',
   },
   purple: {
     name: 'purple',
@@ -141,12 +153,12 @@ export const BG_THEMES: {
 ];
 
 export function getSavedAccentColor(): AccentColor {
-  if (typeof window === 'undefined') return 'rose';
+  if (typeof window === 'undefined') return 'white';
   const saved = localStorage.getItem('naisuru_accent_color') as AccentColor;
   if (saved && ACCENT_CONFIG[saved]) {
     return saved;
   }
-  return 'rose'; // Default is rose
+  return 'white'; // Default is white
 }
 
 export function saveAccentColor(color: AccentColor) {
@@ -156,7 +168,7 @@ export function saveAccentColor(color: AccentColor) {
   const cfg = ACCENT_CONFIG[color];
   if (cfg) {
     document.documentElement.style.setProperty('--accent', cfg.hex);
-    document.documentElement.style.setProperty('--user-msg-bg', cfg.hex);
+    document.documentElement.style.setProperty('--user-msg-bg', '#000000');
   }
 }
 
@@ -180,14 +192,13 @@ export function applySavedThemePreferences() {
   if (typeof window === 'undefined') return;
   const accent = getSavedAccentColor();
   const bgThemeId = getSavedBgTheme();
-  const isDark = document.documentElement.classList.contains('dark');
 
   document.documentElement.setAttribute('data-accent', accent);
   document.documentElement.setAttribute('data-bg-theme', bgThemeId);
 
-  const accentCfg = ACCENT_CONFIG[accent] || ACCENT_CONFIG.rose;
+  const accentCfg = ACCENT_CONFIG[accent] || ACCENT_CONFIG.white;
   document.documentElement.style.setProperty('--accent', accentCfg.hex);
-  document.documentElement.style.setProperty('--user-msg-bg', accentCfg.hex);
+  document.documentElement.style.setProperty('--user-msg-bg', '#000000');
 
   document.documentElement.classList.add('dark');
   const bgConfig = BG_THEMES.find((t) => t.id === bgThemeId) || BG_THEMES[0];

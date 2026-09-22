@@ -32,7 +32,10 @@ export const MessageItem: FC<MessageItemProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
-  const isKodewtUser = isUser && userUsername?.toLowerCase() === 'kodewt';
+  const isVerifiedUser =
+    isUser &&
+    (userUsername?.toLowerCase() === 'kodewt' ||
+      userUsername?.toLowerCase() === 'misiori');
 
   const handleCopy = async () => {
     try {
@@ -50,7 +53,13 @@ export const MessageItem: FC<MessageItemProps> = ({
   });
 
   const resolvedCompanionAvatar = companionAvatar || DEFAULT_NIKILOW_AVATAR;
-  const resolvedCompanionName = companionName || 'nikilow';
+  const resolvedCompanionName = companionName || 'dary';
+  const isVerifiedAssistant =
+    !isUser &&
+    (resolvedCompanionName.toLowerCase() === 'dary' ||
+      resolvedCompanionName.toLowerCase() === 'niki' ||
+      resolvedCompanionName.toLowerCase() === 'nikilow');
+
   const isSafetyViolation =
     !isUser && message.content.includes('You are violating our rules.');
   const hasErrorIndication =
@@ -97,31 +106,50 @@ export const MessageItem: FC<MessageItemProps> = ({
           isUser ? 'items-end' : 'items-start'
         } max-w-[85%] sm:max-w-[78%]`}
       >
+        {/* Name and badge above bubble */}
+        {!isUser && (
+          <div className="flex items-center gap-1.5 mb-1 px-1">
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              {resolvedCompanionName}
+            </span>
+            {isVerifiedAssistant && <VerifiedBadge size="sm" />}
+          </div>
+        )}
+        {isUser && isVerifiedUser && (
+          <div className="flex items-center gap-1.5 mb-1 px-1">
+            <span className="text-xs font-semibold text-gray-400">
+              {userName || userUsername || 'you'}
+            </span>
+            <VerifiedBadge size="sm" />
+          </div>
+        )}
+
         <div
           className={`relative px-4 py-2.5 rounded-2xl text-sm leading-relaxed tracking-normal whitespace-pre-wrap select-text transition-all duration-200 ${
             isUser
-              ? 'chat-bubble-user rounded-tr-xs shadow-xs'
+              ? 'chat-bubble-user rounded-tr-xs shadow-xs text-white font-normal'
               : isSafetyViolation
-              ? 'chat-bubble-companion rounded-tl-xs shadow-xs border border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300 font-medium'
-              : 'chat-bubble-companion rounded-tl-xs shadow-xs'
+              ? 'chat-bubble-companion rounded-tl-xs shadow-xs border border-white/20 bg-white/5 text-gray-200 font-medium'
+              : 'chat-bubble-companion rounded-tl-xs shadow-xs text-gray-200'
           }`}
           style={{
             backgroundColor: isUser
-              ? 'var(--accent)'
+              ? '#000000'
               : isSafetyViolation
               ? undefined
               : 'var(--companion-msg-bg)',
             borderColor: isUser
-              ? undefined
+              ? 'rgba(255, 255, 255, 0.22)'
               : isSafetyViolation
               ? undefined
               : 'var(--border-color)',
+            color: isUser ? '#ffffff' : undefined,
           }}
         >
           {isSafetyViolation && (
-            <div className="flex items-center gap-1.5 mb-1 text-xs font-semibold text-rose-600 dark:text-rose-400">
-              <ShieldAlert size={14} className="shrink-0" />
-              <span>Safety policy</span>
+            <div className="flex items-center gap-1.5 mb-1 text-xs font-semibold text-gray-300">
+              <ShieldAlert size={14} className="shrink-0 text-white" />
+              <span>Safety notice</span>
             </div>
           )}
           {renderMentions(message.content, onMentionClick)}
@@ -149,7 +177,7 @@ export const MessageItem: FC<MessageItemProps> = ({
           {isLastAssistant && !isStreaming && onRetry && (
             <button
               onClick={onRetry}
-              className="p-0.5 rounded hover:text-rose-500 dark:hover:text-rose-400 text-gray-400 dark:text-gray-500 transition-colors flex items-center gap-1 cursor-pointer"
+              className="p-0.5 rounded hover:text-white text-gray-400 dark:text-gray-500 transition-colors flex items-center gap-1 cursor-pointer"
               title="Retry / regenerate response"
             >
               <RefreshCw size={10} />
@@ -175,7 +203,7 @@ export const MessageItem: FC<MessageItemProps> = ({
               {userName ? userName[0].toUpperCase() : <User size={14} />}
             </div>
           )}
-          {isKodewtUser && (
+          {isVerifiedUser && (
             <div className="absolute -bottom-1 -right-1">
               <VerifiedBadge size="sm" />
             </div>

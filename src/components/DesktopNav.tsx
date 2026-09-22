@@ -63,7 +63,7 @@ export const DesktopNav: FC<DesktopNavProps> = ({
       {/* Top Header with App Name and Collapse Button */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800/60">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.6)]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.7)]" />
           <span className="font-semibold text-sm tracking-tight text-white font-mono">
             naisuru
           </span>
@@ -97,13 +97,13 @@ export const DesktopNav: FC<DesktopNavProps> = ({
               onClick={() => onTabChange(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all text-left cursor-pointer group hover-jump-sm ${
                 isActive
-                  ? 'bg-pink-500/15 text-pink-400 font-medium border border-pink-500/30 shadow-xs'
+                  ? 'bg-white/15 text-white font-medium border border-white/30 shadow-xs'
                   : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800/40 border border-transparent'
               }`}
               style={{
                 color: isActive ? accentConfig.hex : undefined,
-                backgroundColor: isActive ? 'rgba(236, 72, 153, 0.12)' : undefined,
-                borderColor: isActive ? 'rgba(236, 72, 153, 0.25)' : undefined,
+                backgroundColor: isActive ? 'rgba(255, 255, 255, 0.12)' : undefined,
+                borderColor: isActive ? 'rgba(255, 255, 255, 0.25)' : undefined,
               }}
             >
               {item.id === 'profile' && userProfile?.avatar_url ? (
@@ -143,10 +143,10 @@ export const DesktopNav: FC<DesktopNavProps> = ({
         <button
           type="button"
           onClick={() => onTabChange('chat')}
-          className="w-full p-2.5 rounded-xl bg-gray-900/60 hover:bg-gray-800/60 border border-gray-800/80 hover:border-pink-500/30 transition-all flex items-center gap-2.5 text-left group cursor-pointer"
+          className="w-full p-2.5 rounded-xl bg-gray-900/60 hover:bg-gray-800/60 border border-gray-800/80 hover:border-white/30 transition-all flex items-center gap-2.5 text-left group cursor-pointer"
           title={`Chat with ${companionName}`}
         >
-          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-pink-500/40">
+          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/40">
             <img
               src={companionAvatar}
               alt={companionName}
@@ -160,10 +160,10 @@ export const DesktopNav: FC<DesktopNavProps> = ({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1">
-              <span className="text-xs font-semibold text-gray-200 group-hover:text-pink-400 transition-colors truncate">
+              <span className="text-xs font-semibold text-gray-200 group-hover:text-white transition-colors truncate">
                 {companionName}
               </span>
-              <Sparkles size={11} className="text-pink-400 shrink-0" />
+              <Sparkles size={11} className="text-white shrink-0" />
             </div>
             <p className="text-[10px] text-gray-500 truncate">
               {activeTab === 'chat' ? 'current chat' : 'open chat'}

@@ -182,7 +182,7 @@ export const AuthModal: FC<AuthModalProps> = ({
           {mode === 'verify-email' ? (
             /* Email verification step */
             <div className="text-center py-2 space-y-4">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-pink-50 dark:bg-pink-950/40 border border-pink-200/60 dark:border-pink-900/40 flex items-center justify-center text-pink-500">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
                 <Inbox size={28} />
               </div>
 
@@ -225,7 +225,7 @@ export const AuthModal: FC<AuthModalProps> = ({
                     setErrorMsg('');
                     setSuccessMsg('');
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-medium shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-gray-100 text-black font-semibold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span>i verified my email — sign in</span>
                   <ArrowRight size={14} />
@@ -314,7 +314,7 @@ export const AuthModal: FC<AuthModalProps> = ({
                     <button
                       type="button"
                       onClick={handleResendLetter}
-                      className="mt-2 text-[11px] font-semibold text-pink-500 hover:underline block cursor-pointer"
+                      className="mt-2 text-[11px] font-semibold text-white hover:underline block cursor-pointer"
                     >
                       resend verification letter
                     </button>

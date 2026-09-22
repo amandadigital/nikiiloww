@@ -3,6 +3,7 @@ import { FC } from 'react';
 interface VerifiedBadgeProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  isBoyfriend?: boolean;
 }
 
 export const VerifiedBadge: FC<VerifiedBadgeProps> = ({
@@ -11,22 +12,20 @@ export const VerifiedBadge: FC<VerifiedBadgeProps> = ({
 }) => {
   const dimensions =
     size === 'lg' ? 'w-5 h-5' : size === 'md' ? 'w-4 h-4' : 'w-3.5 h-3.5';
-  const iconSize = size === 'lg' ? 12 : size === 'md' ? 10 : 9;
+  const iconSize = size === 'lg' ? 12 : size === 'md' ? 10 : 8.5;
 
   return (
-    <span className="inline-flex items-center gap-1.5 select-none shrink-0">
+    <span className="inline-flex items-center select-none shrink-0" title="Verified Account" aria-label="Verified badge">
       <span
-        className={`inline-flex items-center justify-center shrink-0 ${dimensions} rounded-full bg-rose-500 text-white shadow-xs ${className}`}
-        title="Verified Account"
-        aria-label="Verified badge"
+        className={`inline-flex items-center justify-center shrink-0 ${dimensions} rounded-full bg-[#1d9bf0] text-white shadow-xs ring-1 ring-sky-400/40 ${className}`}
       >
         <svg
           width={iconSize}
           height={iconSize}
           viewBox="0 0 24 24"
           fill="none"
-          stroke="currentColor"
-          strokeWidth="3.5"
+          stroke="white"
+          strokeWidth="3.6"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
@@ -36,4 +35,5 @@ export const VerifiedBadge: FC<VerifiedBadgeProps> = ({
     </span>
   );
 };
+
 

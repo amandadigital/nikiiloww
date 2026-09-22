@@ -66,7 +66,7 @@ export const MoreView: FC<MoreViewProps> = ({
                 created by{' '}
                 <button
                   onClick={() => onOpenUserProfile('misiori')}
-                  className="text-pink-400 hover:underline inline-flex items-center gap-0.5 font-semibold cursor-pointer"
+                  className="text-white hover:underline inline-flex items-center gap-0.5 font-semibold cursor-pointer"
                 >
                   @misiori
                 </button>
@@ -84,14 +84,14 @@ export const MoreView: FC<MoreViewProps> = ({
           }}
         >
           <div className="flex items-center gap-2 text-xs font-semibold text-gray-900 dark:text-white lowercase">
-            <Sparkles size={14} className="text-pink-400" />
+            <Sparkles size={14} className="text-white" />
             <span>about</span>
           </div>
           <p className="text-xs text-gray-300 leading-relaxed font-sans">
             naisuru is an app where u can create whoever u want with a prompt. like c.ai but customizable xD. created by{' '}
             <button
               onClick={() => onOpenUserProfile('misiori')}
-              className="font-medium text-pink-400 hover:underline inline-flex items-center gap-1 font-mono cursor-pointer"
+              className="font-medium text-white hover:underline inline-flex items-center gap-1 font-mono cursor-pointer"
             >
               @misiori
               <VerifiedBadge size="sm" />
@@ -110,23 +110,23 @@ export const MoreView: FC<MoreViewProps> = ({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-white lowercase">
-              <Layers size={14} className="text-pink-400" />
+              <Layers size={14} className="text-white" />
               <span>version roadmap</span>
             </div>
-            <span className="px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20 text-[10px] font-mono font-medium">
+            <span className="px-2 py-0.5 rounded-full bg-white/10 text-white border border-white/20 text-[10px] font-mono font-medium">
               v1.0
             </span>
           </div>
 
           <div className="pt-1">
             {/* Current: v1.0 */}
-            <div className="relative pl-5 pb-1 border-l-2 border-pink-500">
-              <div className="absolute -left-[5px] top-0 w-2 h-2 rounded-full bg-pink-500 ring-4 ring-pink-500/20" />
+            <div className="relative pl-5 pb-1 border-l-2 border-white">
+              <div className="absolute -left-[5px] top-0 w-2 h-2 rounded-full bg-white ring-4 ring-white/20" />
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-white font-mono">
                   v1.0 (current)
                 </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-pink-500/15 text-pink-400 border border-pink-500/30 font-mono font-medium">
+                <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-white/15 text-white border border-white/30 font-mono font-medium">
                   live
                 </span>
               </div>
@@ -134,27 +134,27 @@ export const MoreView: FC<MoreViewProps> = ({
               {/* Exact user-requested bullet points */}
               <ul className="text-xs text-gray-200 mt-2.5 space-y-1.5 font-sans">
                 <li className="flex items-center gap-1.5">
-                  <span className="text-pink-400 font-bold font-mono">-</span>
+                  <span className="text-white font-bold font-mono">-</span>
                   <span className="text-gray-200">feed with users' updates</span>
                 </li>
                 <li className="flex items-center gap-1.5">
-                  <span className="text-pink-400 font-bold font-mono">-</span>
+                  <span className="text-white font-bold font-mono">-</span>
                   <span className="text-gray-200">chat with niki and custom prompts creator</span>
                 </li>
                 <li className="flex items-center gap-1.5">
-                  <span className="text-pink-400 font-bold font-mono">-</span>
+                  <span className="text-white font-bold font-mono">-</span>
                   <a
                     href={discordUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-200 hover:text-pink-400 inline-flex items-center gap-1 transition"
+                    className="text-gray-200 hover:text-white inline-flex items-center gap-1 transition"
                   >
                     <span>discord server</span>
                     <ExternalLink size={11} className="text-[#5865F2]" />
                   </a>
                 </li>
                 <li className="flex items-center gap-1.5">
-                  <span className="text-pink-400 font-bold font-mono">-</span>
+                  <span className="text-white font-bold font-mono">-</span>
                   <span className="text-gray-200">pwa app</span>
                 </li>
               </ul>
@@ -243,7 +243,7 @@ export const MoreView: FC<MoreViewProps> = ({
             <span className="text-xs font-medium text-gray-300 lowercase">
               welcome intro
             </span>
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-pink-400 font-medium">
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-white font-medium">
               <RotateCcw size={13} className="group-hover:-rotate-90 transition duration-300" />
               <span>replay animation</span>
             </div>

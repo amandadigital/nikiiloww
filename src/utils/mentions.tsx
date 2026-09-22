@@ -29,10 +29,10 @@ export function renderMentions(
               onMentionClick(rawUsername);
             }
           }}
-          className={`inline-flex items-center gap-1 font-medium transition-colors cursor-pointer hover:underline ${
+          className={`inline-flex items-center gap-1 font-medium transition-colors cursor-pointer hover:underline text-white ${
             isKodewt
-              ? 'text-pink-500 dark:text-pink-400 font-semibold'
-              : 'text-pink-500 dark:text-pink-400'
+              ? 'font-bold underline decoration-white/50'
+              : 'font-semibold underline decoration-white/30'
           }`}
           title={`View @${rawUsername}'s profile`}
         >

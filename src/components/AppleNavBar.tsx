@@ -15,13 +15,13 @@ export const AppleNavBar: FC<AppleNavBarProps> = ({
   activeTab,
   onTabChange,
   userProfile,
-  accentColor = 'rose',
+  accentColor = 'white',
 }) => {
   const isMisiori =
     userProfile?.username?.toLowerCase() === 'misiori' ||
     userProfile?.username?.toLowerCase() === 'kodewt';
 
-  const accentConfig = ACCENT_CONFIG[accentColor] || ACCENT_CONFIG.rose;
+  const accentConfig = ACCENT_CONFIG[accentColor] || ACCENT_CONFIG.white;
 
   const tabs: { id: ActiveTab; label: string; icon: typeof Rss }[] = [
     { id: 'feed', label: 'feed', icon: Rss },
@@ -60,7 +60,7 @@ export const AppleNavBar: FC<AppleNavBarProps> = ({
                   <div
                     className={`w-6 h-6 rounded-full overflow-hidden transition-all ${
                       isActive
-                        ? 'ring-2 ring-rose-500 shadow-xs'
+                        ? 'ring-2 ring-white shadow-xs'
                         : 'ring-1 ring-gray-300 dark:ring-gray-700 opacity-75 group-hover:opacity-100'
                     }`}
                     style={{

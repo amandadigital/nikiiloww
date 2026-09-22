@@ -59,7 +59,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
   onMentionClick,
   wallpaperSettings,
   onOpenVisualisation,
-  accentColor = 'rose',
+  accentColor = 'white',
   onRetry,
 }) => {
   const [inputText, setInputText] = useState('');
@@ -84,7 +84,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
 
   const companionName = personality.name || 'niki';
   const companionAvatar = personality.avatarUrl || DEFAULT_NIKILOW_AVATAR;
-  const accentCfg = ACCENT_CONFIG[accentColor] || ACCENT_CONFIG.rose;
+  const accentCfg = ACCENT_CONFIG[accentColor] || ACCENT_CONFIG.white;
 
   // Guarantee strict chronological order: user message always appears before the assistant's reply
   const sortedMessages = useMemo(() => {
@@ -244,7 +244,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
               <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100 tracking-tight truncate max-w-[140px] sm:max-w-none">
                 {companionName}
               </h1>
-              {(companionName.toLowerCase() === 'niki' || companionName.toLowerCase() === 'nikilow') && (
+              {(companionName.toLowerCase() === 'dary' || companionName.toLowerCase() === 'niki' || companionName.toLowerCase() === 'nikilow') && (
                 <VerifiedBadge size="sm" isBoyfriend={false} />
               )}
             </div>
@@ -305,7 +305,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
                   : `hey, i'm ${companionName.toLowerCase()}.`}
               </span>
               {isDatingThisUser ? (
-                <Heart size={16} className="text-rose-500 fill-rose-500 shrink-0" />
+                <Heart size={16} className="text-white fill-white shrink-0" />
               ) : (
                 <VerifiedBadge size="md" />
               )}
@@ -404,9 +404,12 @@ export const ChatArea: FC<ChatAreaProps> = ({
             <button
               onClick={handleSubmit}
               disabled={!inputText.trim()}
-              className="p-2 rounded-xl text-white disabled:opacity-30 disabled:pointer-events-none transition-all shrink-0 cursor-pointer shadow-xs active:scale-95 hover-jump"
+              className={`p-2 rounded-xl ${
+                accentColor === 'white' ? 'text-black' : 'text-white'
+              } disabled:opacity-30 disabled:pointer-events-none transition-all shrink-0 cursor-pointer shadow-xs active:scale-95 hover-jump`}
               style={{
                 backgroundColor: accentCfg.hex,
+                color: accentColor === 'white' ? '#000000' : '#ffffff',
               }}
               title="send message"
             >

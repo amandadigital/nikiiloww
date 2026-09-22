@@ -215,7 +215,8 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
     if (srvRes.ok) {
       const srvData = await srvRes.json();
       if (srvData?.profile && (srvData.profile.name || srvData.profile.username)) {
-        const isKodewt = srvData.profile.username?.toLowerCase() === 'kodewt';
+        const usernameLower = srvData.profile.username?.toLowerCase();
+        const isSpecialVerified = usernameLower === 'kodewt' || usernameLower === 'misiori';
         const companion = parseCompanionPersonality(srvData.profile);
 
         const profile: UserProfile = {
@@ -225,7 +226,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
           email: srvData.profile.email || '',
           avatar_url: srvData.profile.avatar_url || '',
           bio: srvData.profile.bio || '',
-          is_verified: isKodewt || srvData.profile.is_verified,
+          is_verified: isSpecialVerified || srvData.profile.is_verified,
           decorations: srvData.profile.decorations || undefined,
           companion_personality: companion,
           companion_name: companion?.name,
@@ -260,7 +261,8 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
         .maybeSingle();
 
       if (!error && data) {
-        const isKodewt = data.username?.toLowerCase() === 'kodewt';
+        const usernameLower = data.username?.toLowerCase();
+        const isSpecialVerified = usernameLower === 'kodewt' || usernameLower === 'misiori';
         const companion = parseCompanionPersonality(data);
 
         const profile: UserProfile = {
@@ -270,7 +272,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
           email: data.email || '',
           avatar_url: data.avatar_url || '',
           bio: data.bio || '',
-          is_verified: isKodewt || data.is_verified,
+          is_verified: isSpecialVerified || data.is_verified,
           decorations: data.decorations || undefined,
           companion_personality: companion,
           companion_name: companion?.name,
@@ -311,7 +313,9 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
         email: sessionUser.email || '',
         avatar_url: meta.avatar_url || '',
         bio: meta.bio || '',
-        is_verified: meta.username?.toLowerCase() === 'kodewt',
+        is_verified:
+          meta.username?.toLowerCase() === 'kodewt' ||
+          meta.username?.toLowerCase() === 'misiori',
         decorations: meta.decorations || undefined,
         companion_personality: companion,
         companion_name: companion?.name,
@@ -991,12 +995,15 @@ export async function fetchFeedPosts(currentUserId?: string): Promise<Post[]> {
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data?.posts)) {
-        dbPostsList = data.posts.map((p: any) => ({
-          ...p,
-          isLiked: typeof p.isLiked === 'boolean' ? (p.isLiked || userLikes.includes(p.id)) : userLikes.includes(p.id),
-          isVerified: p.isVerified || p.authorUsername?.toLowerCase() === 'kodewt',
-          decorations: p.decorations || undefined,
-        }));
+        dbPostsList = data.posts.map((p: any) => {
+          const u = p.authorUsername?.toLowerCase();
+          return {
+            ...p,
+            isLiked: typeof p.isLiked === 'boolean' ? (p.isLiked || userLikes.includes(p.id)) : userLikes.includes(p.id),
+            isVerified: p.isVerified || u === 'kodewt' || u === 'misiori',
+            decorations: p.decorations || undefined,
+          };
+        });
       }
     }
   } catch (apiErr) {
@@ -1038,10 +1045,12 @@ export async function fetchFeedPosts(currentUserId?: string): Promise<Post[]> {
           const authorUsername = profile?.username || p.author_username;
           const authorName = profile?.name || profile?.username || p.author_name || authorUsername;
           const authorAvatar = profile?.avatar_url || p.author_avatar || '';
-          const isKodewt =
+          const isSpecial =
             authorUsername?.toLowerCase() === 'kodewt' ||
-            authorUsername?.toLowerCase() === '@kodewt';
-          const isVerified = Boolean(profile?.is_verified ?? p.is_verified) || isKodewt;
+            authorUsername?.toLowerCase() === '@kodewt' ||
+            authorUsername?.toLowerCase() === 'misiori' ||
+            authorUsername?.toLowerCase() === '@misiori';
+          const isVerified = Boolean(profile?.is_verified ?? p.is_verified) || isSpecial;
           const decorations = profile?.decorations || p.decorations || undefined;
 
           return {
@@ -1076,10 +1085,11 @@ export async function fetchFeedPosts(currentUserId?: string): Promise<Post[]> {
   // Add any local posts that aren't yet in DB (or authored recently)
   for (const lp of localPosts) {
     if (!combinedMap.has(lp.id)) {
+      const u = lp.authorUsername.toLowerCase();
       combinedMap.set(lp.id, {
         ...lp,
         isLiked: userLikes.includes(lp.id),
-        isVerified: lp.authorUsername.toLowerCase() === 'kodewt' || lp.isVerified,
+        isVerified: u === 'kodewt' || u === 'misiori' || lp.isVerified,
       });
     }
   }
@@ -1119,7 +1129,8 @@ export async function createFeedPost(
   }
 
   const postTime = Date.now();
-  const isKodewt = userProfile.username.toLowerCase() === 'kodewt';
+  const authorLower = userProfile.username.toLowerCase();
+  const isSpecialVerified = authorLower === 'kodewt' || authorLower === 'misiori';
   const newPost: Post = {
     id: 'post_' + postTime + '_' + Math.random().toString(36).substring(2, 6),
     userId: userProfile.id,
@@ -1130,7 +1141,7 @@ export async function createFeedPost(
     createdAt: postTime,
     likesCount: 0,
     isLiked: false,
-    isVerified: isKodewt || Boolean(userProfile.is_verified),
+    isVerified: isSpecialVerified || Boolean(userProfile.is_verified),
     decorations: userProfile.decorations,
   };
 
@@ -1432,7 +1443,10 @@ export async function fetchProfileByUsername(
         email: data.email || '',
         avatar_url: data.avatar_url || '',
         bio: data.bio || '',
-        is_verified: cleanUsername === 'kodewt' || data.is_verified,
+        is_verified:
+          cleanUsername === 'kodewt' ||
+          cleanUsername === 'misiori' ||
+          data.is_verified,
         decorations: data.decorations || undefined,
       };
     }
@@ -1448,7 +1462,7 @@ export async function fetchProfileByUsername(
     email: `${cleanUsername}@user.net`,
     avatar_url: '',
     bio: '',
-    is_verified: cleanUsername === 'kodewt',
+    is_verified: cleanUsername === 'kodewt' || cleanUsername === 'misiori',
   };
 }
 

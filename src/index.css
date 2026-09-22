@@ -10,11 +10,11 @@
     --border-color: #e5e7eb;
     --text-primary: #1f242e;
     --text-muted: #6b7280;
-    --accent: #f43f5e;
-    --accent-hover: #e11d48;
-    --accent-subtle: rgba(244, 63, 94, 0.12);
-    --accent-ring: rgba(244, 63, 94, 0.25);
-    --user-msg-bg: #f43f5e;
+    --accent: #ffffff;
+    --accent-hover: #f3f4f6;
+    --accent-subtle: rgba(255, 255, 255, 0.15);
+    --accent-ring: rgba(255, 255, 255, 0.35);
+    --user-msg-bg: #000000;
     --companion-msg-bg: #ffffff;
   }
 
@@ -25,43 +25,38 @@
     --border-color: #262c38;
     --text-primary: #e6e8ec;
     --text-muted: #8b92a2;
-    --accent: #f43f5e;
-    --accent-hover: #fb7185;
-    --accent-subtle: rgba(244, 63, 94, 0.18);
-    --accent-ring: rgba(244, 63, 94, 0.35);
-    --user-msg-bg: #f43f5e;
+    --accent: #ffffff;
+    --accent-hover: #f3f4f6;
+    --accent-subtle: rgba(255, 255, 255, 0.15);
+    --accent-ring: rgba(255, 255, 255, 0.35);
+    --user-msg-bg: #000000;
     --companion-msg-bg: #181c24;
   }
 
   /* Accent Color Variants */
-  [data-accent="rose"] {
-    --accent: #f43f5e;
-    --accent-hover: #e11d48;
-    --accent-subtle: rgba(244, 63, 94, 0.15);
-    --accent-ring: rgba(244, 63, 94, 0.3);
-    --user-msg-bg: #f43f5e;
-  }
+  [data-accent="white"],
+  [data-accent="rose"],
   [data-accent="pink"],
   [data-accent="blue"] {
-    --accent: #ec4899;
-    --accent-hover: #db2777;
-    --accent-subtle: rgba(236, 72, 153, 0.15);
-    --accent-ring: rgba(236, 72, 153, 0.3);
-    --user-msg-bg: #ec4899;
+    --accent: #ffffff;
+    --accent-hover: #f3f4f6;
+    --accent-subtle: rgba(255, 255, 255, 0.15);
+    --accent-ring: rgba(255, 255, 255, 0.35);
+    --user-msg-bg: #000000;
   }
   [data-accent="purple"] {
     --accent: #a855f7;
     --accent-hover: #9333ea;
     --accent-subtle: rgba(168, 85, 247, 0.15);
     --accent-ring: rgba(168, 85, 247, 0.3);
-    --user-msg-bg: #a855f7;
+    --user-msg-bg: #000000;
   }
   [data-accent="green"] {
     --accent: #10b981;
     --accent-hover: #059669;
-    --accent-subtle: rgba(16, 185, 129, 0.15);
+    --accent-subtle: rgba(168, 85, 247, 0.15);
     --accent-ring: rgba(16, 185, 129, 0.3);
-    --user-msg-bg: #10b981;
+    --user-msg-bg: #000000;
   }
 
   /* Background Themes (Light Mode) */
@@ -168,9 +163,10 @@
 
 /* Chat Message Bubble styling */
 .chat-bubble-user {
-  background-color: var(--accent) !important;
+  background-color: #000000 !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px -3px var(--accent-subtle, rgba(0, 0, 0, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 4px 14px -3px rgba(0, 0, 0, 0.6) !important;
 }
 
 .chat-bubble-companion {

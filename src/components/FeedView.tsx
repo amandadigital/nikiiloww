@@ -73,11 +73,13 @@ export const FeedView: FC<FeedViewProps> = ({
     const userMap = new Map<string, { username: string; name: string; avatar?: string; isVerified?: boolean }>();
 
     if (userProfile) {
-      userMap.set(userProfile.username.toLowerCase(), {
-        username: userProfile.username.toLowerCase(),
+      const u = userProfile.username.toLowerCase();
+      userMap.set(u, {
+        username: u,
         name: userProfile.name,
         avatar: userProfile.avatar_url,
-        isVerified: userProfile.username.toLowerCase() === 'kodewt',
+        isVerified:
+          Boolean(userProfile.is_verified) || u === 'kodewt' || u === 'misiori',
       });
     }
 
@@ -89,7 +91,7 @@ export const FeedView: FC<FeedViewProps> = ({
           username: u,
           name: p.authorName,
           avatar: p.authorAvatar,
-          isVerified: p.isVerified || u === 'kodewt',
+          isVerified: p.isVerified || u === 'kodewt' || u === 'misiori',
         });
       }
     }
@@ -104,7 +106,7 @@ export const FeedView: FC<FeedViewProps> = ({
             userMap.set(u, {
               username: u,
               name: u,
-              isVerified: u === 'kodewt',
+              isVerified: u === 'kodewt' || u === 'misiori',
             });
           }
         }
@@ -192,7 +194,7 @@ export const FeedView: FC<FeedViewProps> = ({
           >
             <RefreshCw
               size={15}
-              className={`${isRefreshing ? 'animate-spin text-pink-500' : ''}`}
+              className={`${isRefreshing ? 'animate-spin text-white' : ''}`}
             />
           </button>
         </div>
@@ -248,7 +250,7 @@ export const FeedView: FC<FeedViewProps> = ({
                       <User size={11} className="text-gray-500" />
                     )}
                   </div>
-                  <span className="text-gray-800 dark:text-gray-200 group-hover:text-pink-500 transition-colors">
+                  <span className="text-gray-800 dark:text-gray-200 group-hover:text-white transition-colors">
                     @{u.username}
                   </span>
                   {u.isVerified && <VerifiedBadge size="sm" />}
@@ -326,7 +328,7 @@ export const FeedView: FC<FeedViewProps> = ({
                     type="submit"
                     disabled={!content.trim() || isSubmitting || isOverLimit || isRateLimited}
                     title={isRateLimited ? `You can post updates once every 5 minutes. Try again in ${formattedRemaining}.` : 'Post update'}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-medium transition-all shadow-xs disabled:opacity-35 disabled:pointer-events-none active:scale-95 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-black text-xs font-semibold transition-all shadow-xs disabled:opacity-35 disabled:pointer-events-none active:scale-95 cursor-pointer"
                   >
                     <span>{isSubmitting ? 'posting...' : isRateLimited ? `cooldown (${formattedRemaining})` : 'post'}</span>
                     <Send size={12} />
@@ -348,7 +350,7 @@ export const FeedView: FC<FeedViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenAuth}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-medium transition-all shadow-xs shrink-0 cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-black text-xs font-semibold transition-all shadow-xs shrink-0 cursor-pointer"
               >
                 <LogIn size={13} />
                 <span>sign in</span>

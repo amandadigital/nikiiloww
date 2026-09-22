@@ -354,9 +354,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
     const totalPosts = posts.length;
     const uniqueAuthors = new Set(posts.map((p) => p.author_username.toLowerCase())).size;
     const totalLikes = posts.reduce((acc, p) => acc + (p.likes_count || 0), 0);
-    const verifiedCount = posts.filter(
-      (p) => p.is_verified || p.author_username.toLowerCase() === 'kodewt'
-    ).length;
+    const verifiedCount = posts.filter((p) => {
+      const u = p.author_username?.toLowerCase().replace(/^@/, '');
+      return p.is_verified || u === 'kodewt' || u === 'misiori';
+    }).length;
 
     return { totalPosts, uniqueAuthors, totalLikes, verifiedCount };
   }, [posts]);
@@ -552,7 +553,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
               title="Refresh feed list"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors cursor-pointer"
             >
-              <RefreshCw size={14} className={isLoadingPosts ? 'animate-spin text-pink-500' : ''} />
+              <RefreshCw size={14} className={isLoadingPosts ? 'animate-spin text-white' : ''} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
@@ -621,7 +622,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
               Verified Posts
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-semibold text-pink-600 dark:text-pink-400">
+              <span className="text-2xl font-semibold text-gray-900 dark:text-white">
                 {stats.verifiedCount}
               </span>
               <span className="text-xs text-gray-400">verified authors</span>
@@ -642,7 +643,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search content, @username, author name, or post ID..."
-              className="w-full pl-9 pr-8 py-2 bg-gray-50 dark:bg-[#0e1218] border border-gray-200 dark:border-gray-800 rounded-xl text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all"
+              className="w-full pl-9 pr-8 py-2 bg-gray-50 dark:bg-[#0e1218] border border-gray-200 dark:border-gray-800 rounded-xl text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white transition-all"
             />
             {searchQuery && (
               <button
@@ -657,11 +658,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
           {/* Filter Pills & Sorter */}
           <div className="flex flex-wrap items-center gap-2">
             {authorFilter && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800/60 font-medium">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 font-medium">
                 <span>user: @{authorFilter}</span>
                 <button
                   onClick={() => setAuthorFilter(null)}
-                  className="hover:text-pink-900 dark:hover:text-white cursor-pointer"
+                  className="hover:text-black dark:hover:text-white cursor-pointer"
                 >
                   <X size={13} />
                 </button>
@@ -712,7 +713,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
               className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors cursor-pointer"
             >
               {selectedIds.size > 0 && selectedIds.size === filteredPosts.length ? (
-                <CheckSquare size={16} className="text-pink-500" />
+                <CheckSquare size={16} className="text-white" />
               ) : (
                 <Square size={16} />
               )}
@@ -749,7 +750,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
         {/* Posts List / Table View */}
         {isLoadingPosts ? (
           <div className="py-20 flex flex-col items-center justify-center gap-3 text-gray-500">
-            <RefreshCw size={28} className="animate-spin text-pink-500" />
+            <RefreshCw size={28} className="animate-spin text-white" />
             <p className="text-sm">Fetching posts with Supabase service role...</p>
           </div>
         ) : filteredPosts.length === 0 ? (
@@ -781,14 +782,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
           <div className="space-y-3">
             {filteredPosts.map((post) => {
               const isSelected = selectedIds.has(post.id);
-              const isAuthorKodewt = post.author_username?.toLowerCase() === 'kodewt';
+              const authorClean = post.author_username?.toLowerCase().replace(/^@/, '');
+              const isAuthorSpecial = authorClean === 'kodewt' || authorClean === 'misiori';
 
               return (
                 <div
                   key={post.id}
                   className={`bg-white dark:bg-[#151921] rounded-2xl border transition-all p-4.5 sm:p-5 ${
                     isSelected
-                      ? 'border-pink-500/50 bg-pink-50/20 dark:bg-pink-950/10 ring-1 ring-pink-500/30'
+                      ? 'border-white/50 bg-white/5 ring-1 ring-white/30'
                       : 'border-gray-200/80 dark:border-gray-800/80 hover:border-gray-300 dark:hover:border-gray-700/80'
                   }`}
                 >
@@ -801,7 +803,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
                       title={isSelected ? 'Deselect' : 'Select'}
                     >
                       {isSelected ? (
-                        <CheckSquare size={18} className="text-pink-500" />
+                        <CheckSquare size={18} className="text-white" />
                       ) : (
                         <Square size={18} />
                       )}
@@ -831,12 +833,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
                           <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
                             {post.author_name || post.author_username}
                           </span>
-                          {(post.is_verified || isAuthorKodewt) && (
+                          {(post.is_verified || isAuthorSpecial) && (
                             <VerifiedBadge size="sm" />
                           )}
                           <button
                             onClick={() => setAuthorFilter(post.author_username)}
-                            className="text-xs text-gray-500 dark:text-gray-400 hover:text-pink-500 dark:hover:text-pink-400 font-mono transition-colors cursor-pointer"
+                            className="text-xs text-gray-500 dark:text-gray-400 hover:text-white font-mono transition-colors cursor-pointer"
                             title={`Filter posts by @${post.author_username}`}
                           >
                             @{post.author_username}
@@ -852,8 +854,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
 
                         {/* Badges / Likes */}
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                            <Heart size={12} className="fill-rose-500/20" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-gray-800 dark:text-gray-200 border border-white/10">
+                            <Heart size={12} className="fill-current text-white" />
                             <span>{post.likes_count || 0}</span>
                           </span>
                         </div>
@@ -923,7 +925,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToApp, onViewProfi
 
                           <button
                             onClick={() => setAuthorFilter(post.author_username)}
-                            className="px-2.5 py-1 rounded-lg text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-950/40 transition-colors cursor-pointer"
+                            className="px-2.5 py-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                           >
                             Filter User
                           </button>

@@ -500,7 +500,7 @@ export default function App() {
         email: `${clean}@community.local`,
         avatar_url: matchingPost?.authorAvatar || '',
         bio: '',
-        is_verified: clean === 'kodewt',
+        is_verified: clean === 'kodewt' || clean === 'misiori',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
@@ -539,8 +539,10 @@ export default function App() {
 
     const now = Date.now();
     const tempId = 'post_' + now + '_' + Math.random().toString(36).substring(2, 6);
-    const isKodewt = userProfile.username.toLowerCase() === 'kodewt';
-    const isVerifiedUser = isKodewt || Boolean(userProfile.is_verified);
+    const isSpecialVerified =
+      userProfile.username.toLowerCase() === 'kodewt' ||
+      userProfile.username.toLowerCase() === 'misiori';
+    const isVerifiedUser = isSpecialVerified || Boolean(userProfile.is_verified);
     const sanitizedDeco = userProfile.decorations
       ? {
           ...userProfile.decorations,
@@ -662,7 +664,10 @@ export default function App() {
             authorName: updated.name || updated.username,
             authorUsername: updated.username,
             authorAvatar: updated.avatar_url,
-            isVerified: updated.username === 'kodewt' || updated.is_verified,
+            isVerified:
+              updated.username.toLowerCase() === 'kodewt' ||
+              updated.username.toLowerCase() === 'misiori' ||
+              Boolean(updated.is_verified),
             decorations: updated.decorations,
           };
         }
@@ -1089,7 +1094,7 @@ export default function App() {
 
   return (
     <div
-      className="flex h-screen w-screen overflow-hidden text-gray-900 dark:text-gray-100 font-sans selection:bg-pink-500/30 relative transition-colors duration-300"
+      className="flex h-screen w-screen overflow-hidden text-gray-900 dark:text-gray-100 font-sans selection:bg-white/30 relative transition-colors duration-300"
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
       {/* Side navigation menu on computers (toggleable sections sidebar) */}
@@ -1108,11 +1113,11 @@ export default function App() {
         <button
           type="button"
           onClick={toggleDesktopNav}
-          className="fixed top-1/2 -translate-y-1/2 left-0 z-40 hidden md:flex items-center justify-center p-2.5 rounded-r-xl bg-[#0d1017]/90 hover:bg-[#151924] backdrop-blur-md border border-l-0 border-gray-800/90 text-gray-300 hover:text-white hover:border-pink-500/40 shadow-lg transition-all hover-jump-sm cursor-pointer"
+          className="fixed top-1/2 -translate-y-1/2 left-0 z-40 hidden md:flex items-center justify-center p-2.5 rounded-r-xl bg-[#0d1017]/90 hover:bg-[#151924] backdrop-blur-md border border-l-0 border-gray-800/90 text-gray-300 hover:text-white hover:border-white/40 shadow-lg transition-all hover-jump-sm cursor-pointer"
           title="show sections"
           aria-label="Show navigation sections"
         >
-          <PanelLeftOpen size={16} className="text-pink-400" />
+          <PanelLeftOpen size={16} className="text-white" />
         </button>
       )}
 

@@ -137,10 +137,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const profiles = readStoredProfiles();
       const existing = profiles[userId] || {};
       // Check if user is verified before allowing badge in decorations
+      const existingUser = existing.username?.toLowerCase().replace(/^@/, "");
+      const incomingUser = profile.username?.toLowerCase().replace(/^@/, "");
       const isVerified =
         Boolean(existing.is_verified) ||
-        existing.username?.toLowerCase() === "kodewt" ||
-        profile.username?.toLowerCase() === "kodewt";
+        existingUser === "kodewt" ||
+        existingUser === "misiori" ||
+        incomingUser === "kodewt" ||
+        incomingUser === "misiori";
 
       const sanitizedProfile = { ...profile };
       if (sanitizedProfile.decorations) {

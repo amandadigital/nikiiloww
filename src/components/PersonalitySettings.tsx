@@ -262,7 +262,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
               onChange={(e) => setName(e.target.value)}
               placeholder="dary"
               maxLength={32}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-pink-500"
+              className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-white focus:ring-1 focus:ring-white/40"
             />
           </div>
         </div>
@@ -288,7 +288,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
                   onClick={() => setGender(g.id)}
                   className={`py-2 px-2.5 rounded-xl text-xs flex flex-col items-center justify-center transition-all cursor-pointer border ${
                     isSelected
-                      ? 'bg-pink-500/15 border-pink-500 text-pink-600 dark:text-pink-400 font-semibold shadow-2xs'
+                      ? 'bg-white/15 border-white text-white font-semibold shadow-2xs'
                       : 'bg-white dark:bg-[#161a22] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
                   }`}
                 >
@@ -313,7 +313,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
               onClick={() => setRelationshipStatus('friends')}
               className={`py-2.5 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
                 relationshipStatus === 'friends'
-                  ? 'bg-pink-500/15 border-pink-500 text-pink-600 dark:text-pink-400 font-semibold shadow-2xs'
+                  ? 'bg-white/15 border-white text-white font-semibold shadow-2xs'
                   : 'bg-white dark:bg-[#161a22] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
               }`}
             >
@@ -326,7 +326,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
               onClick={() => setRelationshipStatus('dating')}
               className={`py-2.5 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
                 relationshipStatus === 'dating'
-                  ? 'bg-pink-500/15 border-pink-500 text-pink-600 dark:text-pink-400 font-semibold shadow-2xs'
+                  ? 'bg-white/15 border-white text-white font-semibold shadow-2xs'
                   : 'bg-white dark:bg-[#161a22] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
               }`}
             >
@@ -349,7 +349,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
             onChange={(e) => setPersonalityText(e.target.value)}
             rows={3}
             placeholder="behaviour of dary..."
-            className="w-full p-2.5 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-pink-500 resize-none leading-relaxed"
+            className="w-full p-2.5 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-white focus:ring-1 focus:ring-white/40 resize-none leading-relaxed"
           />
         </div>
 
@@ -363,7 +363,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
             onChange={(e) => setStyleText(e.target.value)}
             rows={2}
             placeholder="style of talking..."
-            className="w-full p-2.5 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-pink-500 resize-none leading-relaxed"
+            className="w-full p-2.5 text-xs bg-white dark:bg-[#161a22] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:border-white focus:ring-1 focus:ring-white/40 resize-none leading-relaxed"
           />
         </div>
 
@@ -381,7 +381,7 @@ export const PersonalitySettings: FC<PersonalitySettingsProps> = ({
 
           <button
             type="submit"
-            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold shadow-xs transition-all active:scale-[0.99] cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-white hover:bg-gray-100 text-black text-xs font-semibold shadow-xs transition-all active:scale-[0.99] cursor-pointer"
           >
             <Check size={14} />
             <span>save settings</span>

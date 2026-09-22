@@ -51,7 +51,7 @@ export const IntroAnimation: FC<IntroAnimationProps> = ({ onComplete }) => {
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-auto select-none overflow-hidden bg-[#07090e]">
         {/* Background ambient glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(244,63,94,0.12),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.12),transparent_70%)]" />
 
         {/* Skip button */}
         <button
@@ -83,7 +83,7 @@ export const IntroAnimation: FC<IntroAnimationProps> = ({ onComplete }) => {
               transition={{ delay: 0.15, duration: 0.7 }}
               className="relative w-16 h-16 mb-5"
             >
-              <div className="absolute -inset-2 rounded-2xl bg-rose-500/20 blur-lg animate-pulse" />
+              <div className="absolute -inset-2 rounded-2xl bg-white/20 blur-lg" />
               <img
                 src="https://startorigin2.vercel.app/icon.svg"
                 alt="naisuru logo"
@@ -98,7 +98,7 @@ export const IntroAnimation: FC<IntroAnimationProps> = ({ onComplete }) => {
               transition={{ delay: 0.3, duration: 0.7 }}
               className="text-2xl sm:text-3xl font-semibold tracking-tight text-white mb-2"
             >
-              welcome to <span className="text-rose-400">naisuru!</span>
+              welcome to <span className="text-white font-bold">naisuru!</span>
             </motion.h1>
 
             {/* Subtext */}
@@ -122,12 +122,12 @@ export const IntroAnimation: FC<IntroAnimationProps> = ({ onComplete }) => {
                 ? {
                     scale: [0.3, 1.15, 1],
                     opacity: 1,
-                    boxShadow: '0 0 35px 8px rgba(244,63,94,0.85)',
+                    boxShadow: '0 0 35px 8px rgba(255,255,255,0.85)',
                   }
                 : {
                     scale: 65,
                     opacity: [1, 1, 0],
-                    boxShadow: '0 0 100px 30px rgba(244,63,94,0.4)',
+                    boxShadow: '0 0 100px 30px rgba(255,255,255,0.4)',
                   }
             }
             transition={
@@ -135,7 +135,7 @@ export const IntroAnimation: FC<IntroAnimationProps> = ({ onComplete }) => {
                 ? { duration: 0.35, ease: 'easeOut' }
                 : { duration: 0.75, ease: [0.22, 1, 0.36, 1] }
             }
-            className="w-4 h-4 rounded-full bg-gradient-to-tr from-rose-500 to-rose-400 z-10"
+            className="w-4 h-4 rounded-full bg-white z-10"
           />
         )}
 

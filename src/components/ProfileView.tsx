@@ -124,7 +124,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#fbfbfa] dark:bg-[#0b0d11] pb-24 select-none">
         <div className="max-w-sm w-full p-6 bg-white dark:bg-[#151922] border border-gray-200/80 dark:border-gray-800/80 rounded-3xl shadow-xs">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-pink-50 dark:bg-pink-950/40 text-pink-500 flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/10 border border-white/20 text-white flex items-center justify-center">
             <Sparkles size={28} />
           </div>
 
@@ -137,7 +137,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
 
           <button
             onClick={onOpenAuth}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-white hover:bg-gray-100 text-black text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
           >
             <LogIn size={15} />
             <span>sign in</span>
@@ -160,7 +160,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
           {onBack ? (
             <button
               onClick={onBack}
-              className="flex items-center gap-1 -ml-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-950/40 transition-colors cursor-pointer"
+              className="flex items-center gap-1 -ml-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               aria-label="go back"
             >
               <ArrowLeft size={16} />
@@ -256,8 +256,8 @@ export const ProfileView: FC<ProfileViewProps> = ({
               <p
                 className={`text-xs font-medium mt-0.5 font-mono ${
                   hasCustomBg
-                    ? 'text-rose-300 dark:text-rose-300 drop-shadow-xs'
-                    : 'text-rose-500 dark:text-rose-400'
+                    ? 'text-white/80 drop-shadow-xs'
+                    : 'text-gray-600 dark:text-gray-300'
                 }`}
               >
                 @{profile.username}
@@ -283,7 +283,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${
                       hasCustomBg
                         ? 'bg-white/20 backdrop-blur-md border border-white/30 text-white drop-shadow-xs'
-                        : 'bg-pink-50 dark:bg-pink-950/40 border border-pink-200/60 dark:border-pink-900/40 text-pink-500 dark:text-pink-400'
+                        : 'bg-white/10 border border-white/20 text-white'
                     }`}
                   >
                     <ShieldCheck size={13} />
@@ -319,7 +319,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
                 <div className="flex items-center gap-1.5">
                   <Heart
                     size={14}
-                    className={hasCustomBg ? 'text-rose-400 fill-rose-400' : 'text-rose-500 fill-rose-500'}
+                    className={hasCustomBg ? 'text-white fill-white/80' : 'text-gray-700 dark:text-gray-200 fill-current'}
                   />
                   <span
                     className={`text-sm font-bold font-mono ${
@@ -368,7 +368,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
               />
 
               {postError && (
-                <p className="text-xs text-rose-500">{postError}</p>
+                <p className="text-xs text-red-500 dark:text-red-400">{postError}</p>
               )}
 
               <div className="flex items-center justify-between pt-1 text-xs">
@@ -387,7 +387,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
                   type="submit"
                   disabled={!newPostContent.trim() || isSubmittingPost || isRateLimited}
                   title={isRateLimited ? `Posting updates is limited to once every 5 minutes. Try again in ${formattedRemaining}.` : 'Post update'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-medium shadow-xs disabled:opacity-35 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-black text-xs font-semibold shadow-xs disabled:opacity-35 cursor-pointer"
                 >
                   <span>{isSubmittingPost ? 'posting...' : isRateLimited ? `cooldown (${formattedRemaining})` : 'post'}</span>
                   <Send size={11} />

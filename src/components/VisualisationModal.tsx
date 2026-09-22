@@ -98,7 +98,7 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-white/10 text-white flex items-center justify-center">
               <Sparkles size={16} />
             </div>
             <div>
@@ -134,7 +134,7 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
                     onClick={() => handleSelectPreset(preset.id)}
                     className={`relative h-20 rounded-xl overflow-hidden border transition-all text-left p-2 flex flex-col justify-end group ${
                       isSelected
-                        ? 'border-rose-500 ring-2 ring-rose-500/30 shadow-xs'
+                        ? 'border-white ring-2 ring-white/30 shadow-xs'
                         : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
                     }`}
                   >
@@ -158,7 +158,7 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
                         {preset.name}
                       </span>
                       {isSelected && (
-                        <div className="w-3.5 h-3.5 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0">
+                        <div className="w-3.5 h-3.5 rounded-full bg-white text-black flex items-center justify-center shrink-0">
                           <Check size={9} strokeWidth={3} />
                         </div>
                       )}
@@ -177,7 +177,7 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-800 dark:text-gray-200 text-xs font-medium transition cursor-pointer"
             >
               <Upload size={12} />
               <span>upload image</span>
@@ -210,7 +210,7 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
                   step="0.05"
                   value={wallpaperSettings.opacity}
                   onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
-                  className="w-full accent-rose-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
+                  className="w-full accent-white h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
                 />
               </div>
 
@@ -230,7 +230,7 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
                   step="1"
                   value={wallpaperSettings.blur}
                   onChange={(e) => handleBlurChange(parseInt(e.target.value, 10))}
-                  className="w-full accent-rose-500 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
+                  className="w-full accent-white h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
                 />
               </div>
             </div>
@@ -248,7 +248,7 @@ export const VisualisationModal: FC<VisualisationModalProps> = ({
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-medium transition"
+            className="px-4 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-black text-xs font-semibold transition"
           >
             done
           </button>

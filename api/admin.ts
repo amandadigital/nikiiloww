@@ -109,9 +109,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const totalLikes =
         posts?.reduce((acc, p) => acc + (p.likes_count || 0), 0) || 0;
       const verifiedPosts =
-        posts?.filter(
-          (p) => p.is_verified || p.author_username?.toLowerCase() === "kodewt"
-        ).length || 0;
+        posts?.filter((p) => {
+          const u = p.author_username?.toLowerCase().replace(/^@/, "");
+          return p.is_verified || u === "kodewt" || u === "misiori";
+        }).length || 0;
 
       res.status(200).json({
         success: true,

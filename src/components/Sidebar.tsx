@@ -148,14 +148,14 @@ export const Sidebar: FC<SidebarProps> = ({
               <span className="font-semibold tracking-tight text-sm text-gray-900 dark:text-gray-100 truncate">
                 {personality.name}
               </span>
-              {isMisiori && (personality.name.toLowerCase() === 'niki' || personality.name.toLowerCase() === 'nikilow') && (
+              {(personality.name.toLowerCase() === 'dary' || personality.name.toLowerCase() === 'niki' || personality.name.toLowerCase() === 'nikilow') && (
                 <VerifiedBadge size="sm" />
               )}
             </div>
             <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-1">
               {personality.relationshipStatus === 'dating' ? (
-                <span className="text-rose-500 flex items-center gap-1 font-medium">
-                  <Heart size={10} className="fill-rose-500 text-rose-500 shrink-0" />
+                <span className="text-gray-800 dark:text-gray-200 flex items-center gap-1 font-medium">
+                  <Heart size={10} className="fill-current text-white shrink-0" />
                   dating
                 </span>
               ) : (
@@ -197,7 +197,7 @@ export const Sidebar: FC<SidebarProps> = ({
             onClick={() => setMenuTab('personality')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
               menuTab === 'personality'
-                ? 'bg-white dark:bg-[#202734] text-rose-500 shadow-xs font-semibold'
+                ? 'bg-white dark:bg-[#202734] text-gray-900 dark:text-gray-100 shadow-xs font-semibold'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
@@ -210,7 +210,7 @@ export const Sidebar: FC<SidebarProps> = ({
             onClick={() => setMenuTab('visualisation')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
               menuTab === 'visualisation'
-                ? 'bg-white dark:bg-[#202734] text-rose-500 shadow-xs font-semibold'
+                ? 'bg-white dark:bg-[#202734] text-gray-900 dark:text-gray-100 shadow-xs font-semibold'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
@@ -435,7 +435,7 @@ export const Sidebar: FC<SidebarProps> = ({
                   onSignOut();
                   onCloseMobile();
                 }}
-                className="p-2.5 rounded-2xl bg-white dark:bg-[#161a22] border border-gray-200/80 dark:border-gray-800/80 hover:border-rose-300 dark:hover:border-rose-900/60 hover:text-rose-500 dark:hover:text-rose-400 text-gray-400 transition-all shadow-2xs cursor-pointer shrink-0"
+                className="p-2.5 rounded-2xl bg-white dark:bg-[#161a22] border border-gray-200/80 dark:border-gray-800/80 hover:border-white/50 hover:text-white text-gray-400 transition-all shadow-2xs cursor-pointer shrink-0"
                 title="sign out"
               >
                 <LogOut size={15} />
@@ -461,7 +461,7 @@ export const Sidebar: FC<SidebarProps> = ({
         <div className="p-3 pt-2 border-t border-gray-200/60 dark:border-gray-800/60">
           <button
             onClick={onClearAll}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer"
           >
             <Trash2 size={13} />
             <span>clear history</span>

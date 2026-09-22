@@ -107,7 +107,7 @@ export const SearchView: FC<SearchViewProps> = ({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="search"
-          className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-gray-100/80 dark:bg-gray-800/60 border border-transparent focus:border-rose-500/50 dark:focus:border-rose-500/40 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition lowercase"
+          className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-gray-100/80 dark:bg-gray-800/60 border border-transparent focus:border-white/50 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 transition lowercase"
           autoFocus={false}
         />
         {query && (

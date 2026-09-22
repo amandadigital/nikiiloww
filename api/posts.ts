@@ -200,15 +200,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
-      const isKodewt =
-        authorUsername.toLowerCase() === "kodewt" ||
-        authorUsername.toLowerCase() === "@kodewt";
+      const cleanAuthor = authorUsername.toLowerCase().replace(/^@/, "");
+      const isSpecialVerified =
+        cleanAuthor === "kodewt" || cleanAuthor === "misiori";
 
       // If decorations not explicitly in request, check author's profile
       const storedProfiles = readStoredProfiles();
       const authorProfile = storedProfiles[userId];
       const isAuthorVerified =
-        isKodewt || Boolean(isVerified) || Boolean(authorProfile?.is_verified);
+        isSpecialVerified || Boolean(isVerified) || Boolean(authorProfile?.is_verified);
       const rawDecorations = decorations || authorProfile?.decorations || null;
       const postDecorations = rawDecorations
         ? {
@@ -267,7 +267,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           createdAt: new Date(insertedPost.created_at).getTime(),
           likesCount: insertedPost.likes_count || 0,
           isLiked: false,
-          isVerified: insertedPost.is_verified || isKodewt,
+          isVerified: insertedPost.is_verified || isSpecialVerified,
           decorations: insertedPost.decorations || postDecorations || undefined,
         },
       });
@@ -375,10 +375,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const authorUsername = profile?.username || p.author_username;
         const authorName = profile?.name || profile?.username || p.author_name || authorUsername;
         const authorAvatar = profile?.avatar_url || p.author_avatar || "";
-        const isKodewt =
-          authorUsername?.toLowerCase() === "kodewt" ||
-          authorUsername?.toLowerCase() === "@kodewt";
-        const isVerified = Boolean(profile?.is_verified ?? p.is_verified) || isKodewt;
+        const cleanAuthor = authorUsername?.toLowerCase().replace(/^@/, "");
+        const isSpecial = cleanAuthor === "kodewt" || cleanAuthor === "misiori";
+        const isVerified = Boolean(profile?.is_verified ?? p.is_verified) || isSpecial;
         const rawDecorations =
           profile?.decorations ||
           p.decorations ||
