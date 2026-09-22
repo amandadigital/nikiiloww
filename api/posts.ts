@@ -5,7 +5,7 @@ import {
   readStoredLikes,
   writeStoredLikes,
 } from "./_lib/supabaseAdmin.ts";
-import { detectSafetyViolation, VIOLATION_MESSAGE } from "./chat.ts";
+import { moderateContentWithAI, VIOLATION_MESSAGE } from "./chat.ts";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const url = req.url || "";
@@ -188,8 +188,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
-      // Safety check for dangerous/violent content, kills, or harmful hate speech
-      const safetyCheck = detectSafetyViolation(trimmed);
+      // Contextual Safety Check evaluated exclusively by AI (no hardcoded word lists)
+      const safetyCheck = await moderateContentWithAI(trimmed);
       if (safetyCheck.isViolating) {
         res.status(400).json({ error: VIOLATION_MESSAGE });
         return;

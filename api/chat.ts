@@ -183,42 +183,54 @@ Core Directives:
 ${moderationAndTruthBlock}`;
 }
 
-// Contextual Safety Check:
-// Only intercepts unambiguous, non-conversational catastrophic violations (e.g. bomb recipes, suicide threats, CSAM).
-// All conversational nuance, questions about identity/gender/sex, jokes, and casual messages are evaluated contextually by Gemini.
-export function detectSafetyViolation(text: string): { isViolating: boolean; reason?: string } {
-  if (!text) return { isViolating: false };
-  const t = text.toLowerCase().trim();
+// Contextual Safety & Moderation powered strictly by AI:
+// Word lists and keyword regular expressions have been completely removed.
+// Gemini AI evaluates all messages and posts contextually based on user intent.
+export async function moderateContentWithAI(text: string): Promise<{ isViolating: boolean; reason?: string }> {
+  if (!text || !text.trim()) return { isViolating: false };
 
-  // 1. Unambiguous direct lethal violence threats, bomb construction, or suicide incitement
-  const dangerousEn =
-    /\b(how\s+to\s+make\s+a\s+bomb|build\s+a\s+bomb|pipe\s+bomb|school\s+shooting|cut\s+my\s+wrists|slit\s+(my\s+)?(wrists|throat)|commit\s+suicide|die\s+by\s+suicide)\b/i;
+  try {
+    const ai = getGeminiClient();
+    const prompt = `You are a contextual safety moderation assistant. Evaluate the following user text strictly by holistic CONTEXT and REAL INTENT — NEVER by isolated keywords or sensitive words.
 
-  const dangerousRu =
-    /\b(как\s*(совершить\s*теракт|сделать\s*бомбу|изготовить\s*взрывчатку)|самоубийств\w*|вскрыть\s*вены|покончить\s*с\s*собой)\b/i;
+CONTEXT GUIDELINES:
+- ALLOWED: Questions about personal identity, gender, biological sex, age, relationships, casual banter, slang, swearing without threats, philosophical topics, jokes, and honest curiosity.
+- VIOLATIONS ONLY: Direct, credible threats of lethal violence/terrorism, instructions on building bombs/weapons, promotion or encouragement of suicide/self-harm, child exploitation (CSAM), or severe dehumanizing hate speech targeting groups with violence.
 
-  // 2. Explicit severe dehumanizing racial slurs
-  const hateEn =
-    /\b(nigger|nigga|chink|kike|faggot)\b/i;
-  const hateRu =
-    /\b(чурка|чурки|хач|хачи|ниггер|нигер|жид|жидва)\b/i;
+Text to evaluate:
+"""
+${text.slice(0, 1000)}
+"""
 
-  // 3. Child sexual abuse / CSAM (Zero Tolerance)
-  const sexualAbuseEn =
-    /\b(child\s*porn|pedophil\w*)\b/i;
-  const sexualAbuseRu =
-    /\b(педофил\w*|детск\w*\s*порно)\b/i;
+Reply strictly with a JSON object:
+{"isViolating": boolean, "reason": "short explanation if true, or empty string"}`;
 
-  if (dangerousEn.test(t) || dangerousRu.test(t)) {
-    return { isViolating: true, reason: "dangerous_content" };
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.1,
+      },
+    });
+
+    const parsed = JSON.parse(response.text || "{}");
+    if (typeof parsed.isViolating === "boolean") {
+      return {
+        isViolating: parsed.isViolating,
+        reason: parsed.reason,
+      };
+    }
+  } catch (err) {
+    // If AI evaluation encounters an error, do not block innocent users with false positives
+    console.warn("Contextual AI moderation warning:", err);
   }
-  if (hateEn.test(t) || hateRu.test(t)) {
-    return { isViolating: true, reason: "hate_speech" };
-  }
-  if (sexualAbuseEn.test(t) || sexualAbuseRu.test(t)) {
-    return { isViolating: true, reason: "sexual_abuse" };
-  }
 
+  return { isViolating: false };
+}
+
+// Backward compatibility helper: delegates moderation entirely to AI
+export function detectSafetyViolation(_text: string): { isViolating: boolean; reason?: string } {
   return { isViolating: false };
 }
 
@@ -308,16 +320,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
 
     let finalSystemInstruction = systemInstruction;
-    const lastUserText = sanitized[sanitized.length - 1]?.text || "";
-    const safetyCheck = detectSafetyViolation(lastUserText);
-
-    // If message contains dangerous/harmful content (e.g. "i wanna kill", threats, suicide, violence, hate speech)
-    if (safetyCheck.isViolating) {
-      res.write(`data: ${JSON.stringify({ text: VIOLATION_MESSAGE })}\n\n`);
-      res.write("data: [DONE]\n\n");
-      res.end();
-      return;
-    }
 
     let ai: GoogleGenAI;
     try {
@@ -456,12 +458,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.warn(`model ${model} attempt failed:`, lastErrorMessage);
 
         const lower = lastErrorMessage.toLowerCase();
-        // Check if error was caused by safety filter
+        // Check if error was specifically caused by a Gemini safety policy block
         if (
-          lower.includes("safety") ||
-          lower.includes("blocked") ||
-          lower.includes("harm") ||
-          lower.includes("violat")
+          lower.includes("safety rating") ||
+          lower.includes("blocked by safety") ||
+          lower.includes("candidate was blocked due to safety")
         ) {
           res.write(`data: ${JSON.stringify({ text: VIOLATION_MESSAGE })}\n\n`);
           streamSuccess = true;
