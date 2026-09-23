@@ -150,7 +150,7 @@ export const Sidebar: FC<SidebarProps> = ({
               <span className="font-semibold tracking-tight text-sm text-gray-900 dark:text-gray-100 truncate">
                 {personality.name}
               </span>
-              {(personality.name.toLowerCase() === 'dary' || personality.name.toLowerCase() === 'niki' || personality.name.toLowerCase() === 'nikilow') && (
+              {(personality.name.toLowerCase() === 'dary' || personality.name.toLowerCase() === 'dary' || personality.name.toLowerCase() === 'dary') && (
                 <VerifiedBadge size="sm" />
               )}
             </div>

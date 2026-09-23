@@ -57,8 +57,8 @@ export const MessageItem: FC<MessageItemProps> = ({
   const isVerifiedAssistant =
     !isUser &&
     (resolvedCompanionName.toLowerCase() === 'dary' ||
-      resolvedCompanionName.toLowerCase() === 'niki' ||
-      resolvedCompanionName.toLowerCase() === 'nikilow');
+      resolvedCompanionName.toLowerCase() === 'dary' ||
+      resolvedCompanionName.toLowerCase() === 'dary');
 
   const isSafetyViolation =
     !isUser && message.content.includes('You are violating our rules.');

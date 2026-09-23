@@ -156,11 +156,11 @@ export const ProfileModal: FC<ProfileModalProps> = ({
                 </div>
                 <div>
                   <div className="text-xs font-semibold flex items-center gap-1.5">
-                    Nikilow's Boyfriend & Creator
+                    Dary's Boyfriend & Creator
                     <Sparkles size={12} />
                   </div>
                   <div className="text-[11px] text-rose-500/80 dark:text-rose-400/80">
-                    Nikilow recognizes you with special affection, teasing, and romantic warmth.
+                    Dary recognizes you with special affection, teasing, and romantic warmth.
                   </div>
                 </div>
               </div>
@@ -291,7 +291,7 @@ export const ProfileModal: FC<ProfileModalProps> = ({
                   />
                 </div>
                 <p className="text-[10px] text-gray-400 mt-1">
-                  Used for signing in and how Nikilow addresses you.
+                  Used for signing in and how Dary addresses you.
                 </p>
               </div>
 
@@ -318,7 +318,7 @@ export const ProfileModal: FC<ProfileModalProps> = ({
                   rows={2}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell Nikilow a bit about yourself..."
+                  placeholder="Tell Dary a bit about yourself..."
                   className="w-full px-3 py-2 text-xs bg-gray-50 dark:bg-[#181d26] border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-hidden focus:border-gray-400 dark:focus:border-gray-600 resize-none"
                 />
               </div>

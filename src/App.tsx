@@ -464,7 +464,7 @@ export default function App() {
     const clean = username.trim().toLowerCase().replace(/^@/, '');
 
     // Companion profile view is disabled as personality is dynamic and customizable
-    if (clean === 'niki' || clean === 'nikilow' || clean === personality.name.toLowerCase()) {
+    if (clean === 'dary' || clean === 'dary' || clean === personality.name.toLowerCase()) {
       return;
     }
 
@@ -854,7 +854,7 @@ export default function App() {
     for (const s of otherSessions.slice(0, 5)) {
       if (s.messages.length > 0) {
         const exchanges = s.messages.slice(-4).map((m) => {
-          const roleLabel = m.role === 'user' ? 'User' : (personality?.name || 'Nikilow');
+          const roleLabel = m.role === 'user' ? 'User' : (personality?.name || 'dary');
           return `${roleLabel}: ${m.content.trim().slice(0, 120)}`;
         });
         if (exchanges.length > 0) {

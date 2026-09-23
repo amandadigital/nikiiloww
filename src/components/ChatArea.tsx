@@ -244,7 +244,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
               <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100 tracking-tight truncate max-w-[140px] sm:max-w-none">
                 {companionName}
               </h1>
-              {(companionName.toLowerCase() === 'dary' || companionName.toLowerCase() === 'niki' || companionName.toLowerCase() === 'nikilow') && (
+              {(companionName.toLowerCase() === 'dary' || companionName.toLowerCase() === 'dary' || companionName.toLowerCase() === 'dary') && (
                 <VerifiedBadge size="sm" isBoyfriend={false} />
               )}
             </div>
