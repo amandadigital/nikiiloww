@@ -121,11 +121,13 @@ export const Sidebar: FC<SidebarProps> = ({
       (rawUser === 'misiori' || rawUser === 'kodewt' || rawName.includes('misiori')))
   );
 
-  const isMisiori =
+  const isMisiori = Boolean(
     userProfile &&
-    (userProfile.username.toLowerCase() === 'misiori' ||
-      userProfile.username.toLowerCase() === 'kodewt' ||
-      userProfile.name.toLowerCase().includes('misiori'));
+      (Boolean(userProfile.is_verified) ||
+        userProfile.username.toLowerCase().replace(/^@/, '') === 'misiori' ||
+        userProfile.username.toLowerCase().replace(/^@/, '') === 'kodewt' ||
+        userProfile.name.toLowerCase().includes('misiori'))
+  );
 
   const renderSidebarContent = () => (
     <div className="flex flex-col h-full select-none">

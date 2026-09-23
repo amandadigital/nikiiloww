@@ -28,11 +28,11 @@ export const GEMINI_SAFETY_SETTINGS = [
 ];
 
 // High-performance candidate models in optimal priority order:
-// gemini-3.8-flash with ThinkingLevel.LOW is blazing fast with instant time-to-first-token
+// gemini-3.8-flash is primary; gemini-3.1-flash-lite provides independent high-throughput capacity during peak traffic
 export const CANDIDATE_MODELS = [
   "gemini-3.8-flash",
-  "gemini-flash-latest",
   "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
 ];
 
 function getGeminiClient(): GoogleGenAI {
@@ -206,7 +206,7 @@ Reply strictly with a JSON object:
 {"isViolating": boolean, "reason": "short explanation if true, or empty string"}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -346,10 +346,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     });
 
-    for (const model of CANDIDATE_MODELS) {
+    for (let modelIdx = 0; modelIdx < CANDIDATE_MODELS.length; modelIdx++) {
       if (clientClosed) break;
+      const model = CANDIDATE_MODELS[modelIdx];
+      let modelYieldedChunk = false;
+
       try {
-        // Fast streaming configuration with minimal thinking latency and strict safety settings
+        // Fast streaming configuration with minimal thinking latency and safety settings
         let responseStream: any;
         try {
           responseStream = await ai.models.generateContentStream({
@@ -363,21 +366,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               safetySettings: GEMINI_SAFETY_SETTINGS,
             },
           });
-        } catch (_cfgErr) {
-          // Model might not support thinkingConfig, fallback with safetySettings
-          responseStream = await ai.models.generateContentStream({
-            model,
-            contents,
-            config: {
-              systemInstruction: finalSystemInstruction,
-              temperature: 0.7,
-              topP: 0.95,
-              safetySettings: GEMINI_SAFETY_SETTINGS,
-            },
-          });
+        } catch (streamErr: any) {
+          const sErrStr = (streamErr?.message || String(streamErr)).toLowerCase();
+          // Only retry without thinkingConfig if error is explicitly an argument/schema incompatibility
+          if (
+            sErrStr.includes("thinking") ||
+            sErrStr.includes("invalid argument") ||
+            sErrStr.includes("unknown field") ||
+            sErrStr.includes("unrecognized")
+          ) {
+            responseStream = await ai.models.generateContentStream({
+              model,
+              contents,
+              config: {
+                systemInstruction: finalSystemInstruction,
+                temperature: 0.7,
+                topP: 0.95,
+                safetySettings: GEMINI_SAFETY_SETTINGS,
+              },
+            });
+          } else {
+            throw streamErr;
+          }
         }
 
-        let modelYieldedChunk = false;
         for await (const chunk of responseStream) {
           if (clientClosed) break;
 
@@ -411,31 +423,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // If streaming didn't yield text, try direct generateContent as fallback
         if (!modelYieldedChunk && !clientClosed) {
-          let fullResponse: any;
-          try {
-            fullResponse = await ai.models.generateContent({
-              model,
-              contents,
-              config: {
-                systemInstruction: finalSystemInstruction,
-                temperature: 0.7,
-                topP: 0.95,
-                thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-                safetySettings: GEMINI_SAFETY_SETTINGS,
-              },
-            });
-          } catch (_genErr) {
-            fullResponse = await ai.models.generateContent({
-              model,
-              contents,
-              config: {
-                systemInstruction: finalSystemInstruction,
-                temperature: 0.7,
-                topP: 0.95,
-                safetySettings: GEMINI_SAFETY_SETTINGS,
-              },
-            });
-          }
+          const fullResponse = await ai.models.generateContent({
+            model,
+            contents,
+            config: {
+              systemInstruction: finalSystemInstruction,
+              temperature: 0.7,
+              topP: 0.95,
+              safetySettings: GEMINI_SAFETY_SETTINGS,
+            },
+          });
 
           if (
             fullResponse?.candidates?.[0]?.finishReason === "SAFETY" ||
@@ -453,8 +450,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
       } catch (err: unknown) {
-        const error = err as Error;
-        lastErrorMessage = error?.message || "";
+        const error = err as any;
+        lastErrorMessage = error?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "";
         console.warn(`model ${model} attempt failed:`, lastErrorMessage);
 
         const lower = lastErrorMessage.toLowerCase();
@@ -468,7 +465,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           streamSuccess = true;
           break;
         }
-        // Break immediately on permanent auth/quota issues so user does not wait endlessly
+
+        // Break immediately on permanent auth/key issues so user does not wait endlessly
         if (
           lower.includes("leaked") ||
           lower.includes("revoked") ||
@@ -479,7 +477,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           break;
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 80));
+        // If capacity overloaded (503 / 429 / overloaded), apply exponential backoff with jitter
+        if (
+          lower.includes("503") ||
+          lower.includes("overloaded") ||
+          lower.includes("unavailable") ||
+          lower.includes("high demand") ||
+          lower.includes("429") ||
+          lower.includes("resource_exhausted")
+        ) {
+          const backoffMs = 500 * Math.pow(1.5, modelIdx) + Math.random() * 300;
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
       }
     }
 
@@ -495,28 +506,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         lower.includes("api key was reported as leaked")
       ) {
         friendlyError =
-          "The Gemini API key was reported as expired or invalid. Please update GEMINI_API_KEY in Settings (Secrets) with a fresh key from Google AI Studio.";
+          "The Gemini API key was reported as revoked or expired by Google. Please update your GEMINI_API_KEY in the Settings > Secrets panel with a fresh key from Google AI Studio.";
       } else if (
         lower.includes("api_key_invalid") ||
         lower.includes("api key not valid") ||
         lower.includes("not defined")
       ) {
         friendlyError =
-          "GEMINI_API_KEY is missing or invalid. Please configure GEMINI_API_KEY in Settings.";
+          "GEMINI_API_KEY is missing or invalid. Please configure GEMINI_API_KEY in Settings > Secrets.";
       } else if (
         lower.includes("429") ||
         lower.includes("quota") ||
         lower.includes("resource_exhausted")
       ) {
         friendlyError =
-          "Gemini API rate limit reached. Please wait a brief moment and try again.";
+          "Gemini API rate limit reached. Please wait a brief moment and tap retry.";
       } else if (
         lower.includes("503") ||
         lower.includes("high demand") ||
-        lower.includes("unavailable")
+        lower.includes("unavailable") ||
+        lower.includes("overloaded")
       ) {
         friendlyError =
-          "The AI service is experiencing high traffic right now. Please try again in a few seconds.";
+          "The AI service is experiencing high traffic right now. Please wait a few seconds and tap retry.";
       } else if (lastErrorMessage) {
         friendlyError = `AI service notice: ${lastErrorMessage}`;
       }

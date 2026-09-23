@@ -58,11 +58,11 @@ export const ProfileView: FC<ProfileViewProps> = ({
   const isOwnProfile =
     currentUser && profile && currentUser.username.toLowerCase() === profile.username.toLowerCase();
 
+  const profileUserClean = (profile?.username || '')
+    .toLowerCase()
+    .replace(/^@/, '');
   const isMisiori =
-    Boolean(
-      profile?.username.toLowerCase() === 'misiori' ||
-      profile?.username.toLowerCase() === 'kodewt'
-    );
+    profileUserClean === 'misiori' || profileUserClean === 'kodewt';
 
   const isVerified = isMisiori || Boolean(profile?.is_verified);
 
@@ -148,7 +148,8 @@ export const ProfileView: FC<ProfileViewProps> = ({
   }
 
   // Only authentic verified users have the ability to make the verified badge seen for everyone
-  const isProfileBadge = isVerified && profile.decorations?.badge !== false;
+  const isProfileBadge =
+    isMisiori || (isVerified && profile.decorations?.badge !== false);
   const hasCustomBg = Boolean(profile.decorations?.backgroundValue);
   const bgOpacity = getBackgroundOpacity(profile.decorations);
 

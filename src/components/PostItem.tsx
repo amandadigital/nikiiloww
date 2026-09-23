@@ -24,11 +24,12 @@ export const PostItem: FC<PostItemProps> = ({
   canDelete = false,
 }) => {
   // Only authentic verified users have the ability to make the verified badge seen for everyone
-  const isVerifiedUser =
-    Boolean(post.isVerified) ||
-    post.authorUsername.toLowerCase().replace(/^@/, '') === 'kodewt';
+  const cleanAuthor = post.authorUsername.toLowerCase().replace(/^@/, '');
+  const isSpecialVerified = cleanAuthor === 'kodewt' || cleanAuthor === 'misiori';
+  const isVerifiedUser = Boolean(post.isVerified) || isSpecialVerified;
 
-  const hasBadge = isVerifiedUser && post.decorations?.badge !== false;
+  const hasBadge =
+    isSpecialVerified || (isVerifiedUser && post.decorations?.badge !== false);
   const hasCustomBg = Boolean(post.decorations?.backgroundValue);
   const bgOpacity = getBackgroundOpacity(post.decorations);
 
