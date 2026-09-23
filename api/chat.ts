@@ -28,8 +28,10 @@ export const GEMINI_SAFETY_SETTINGS = [
 ];
 
 // High-performance candidate models in optimal priority order:
-// gemini-3.8-flash is primary; gemini-3.1-flash-lite provides independent high-throughput capacity during peak traffic
+// gemini-3.6-flash and gemini-3.5-flash provide robust capacity, low latency, and separate quota pools
 export const CANDIDATE_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
   "gemini-3.8-flash",
   "gemini-3.1-flash-lite",
   "gemini-flash-latest",
@@ -205,16 +207,28 @@ ${text.slice(0, 1000)}
 Reply strictly with a JSON object:
 {"isViolating": boolean, "reason": "short explanation if true, or empty string"}`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.1,
-      },
-    });
+    let response: any;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          temperature: 0.1,
+        },
+      });
+    } catch (_firstErr) {
+      response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          temperature: 0.1,
+        },
+      });
+    }
 
-    const parsed = JSON.parse(response.text || "{}");
+    const parsed = JSON.parse(response?.text || "{}");
     if (typeof parsed.isViolating === "boolean") {
       return {
         isViolating: parsed.isViolating,
