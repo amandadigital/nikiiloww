@@ -1023,7 +1023,7 @@ export default function App() {
                         ...m,
                         content:
                           m.content ||
-                          "sorry, connection dropped for a sec... what were you saying?",
+                          "I had a quick connection glitch for a moment. Tap retry or send your message again.",
                       }
                     : m
                 ),

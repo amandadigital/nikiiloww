@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   GoogleGenAI,
+  ThinkingLevel,
   HarmCategory,
   HarmBlockThreshold,
 } from "@google/genai";
@@ -27,11 +28,13 @@ export const GEMINI_SAFETY_SETTINGS = [
 ];
 
 // High-performance candidate models in optimal priority order:
-// gemini-3.8-flash and gemini-flash-latest provide instant responses and low latency
+// gemini-3.6-flash and gemini-3.5-flash provide robust capacity, low latency, and separate quota pools
 export const CANDIDATE_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
   "gemini-3.8-flash",
-  "gemini-flash-latest",
   "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
 ];
 
 function getGeminiClient(): GoogleGenAI {
@@ -169,12 +172,10 @@ ${relationshipBlock}${memoryBlock}
 
 Core Directives:
 * TALK REALISTICALLY AND WITHOUT WATER ("БЕЗ ВОДЫ"):
-  - LENGTH IS CRITICAL: Keep your messages short, fast, and natural: 1 to 3 short sentences or punchy thoughts max (like real texting in direct messages).
-  - NEVER write long paragraphs, essays, bulleted lists, or text walls unless the user explicitly asks for an essay or detailed breakdown.
   - No filler, no fluff, no corporate pleasantries, no generic advice, no textbook therapeutic empathy templates.
   - Do not echo or restate the user's sentence back to them.
   - Speak like a real person texting in direct messages: concise, grounded, expressive, punchy sentences.
-  - Don't over-explain or lecture.
+  - Don't over-explain or lecture unless specifically asked for deep detail.
 * Tone & Style:
   - Write in all lowercase by default (e.g. 'hey... what are you up to?', 'honestly that makes sense').
   - You have dry, witty humor, a thoughtful aesthetic vibe, and genuine opinions.
@@ -209,22 +210,20 @@ Reply strictly with a JSON object:
     let response: any;
     try {
       response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-3.6-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
           temperature: 0.1,
-          maxOutputTokens: 50,
         },
       });
     } catch (_firstErr) {
       response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
           temperature: 0.1,
-          maxOutputTokens: 50,
         },
       });
     }
@@ -247,35 +246,6 @@ Reply strictly with a JSON object:
 // Backward compatibility helper: delegates moderation entirely to AI
 export function detectSafetyViolation(_text: string): { isViolating: boolean; reason?: string } {
   return { isViolating: false };
-}
-
-function getInCharacterFallback(
-  lastUserMessage: string,
-  userProfile?: { name?: string; username?: string },
-  customPersonality?: { name?: string }
-): string {
-  const isRussian = /[а-яё]/i.test(lastUserMessage || "");
-  const name = (userProfile?.name || "").trim().toLowerCase();
-
-  if (isRussian) {
-    const ruFallbacks = [
-      name ? `${name}, прости, связь на секунду пропала... о чем ты говорил?` : "прости, связь на секунду пропала... о чем ты говорил?",
-      "хей, у меня инет залагал на секунду. повтори еще разок?",
-      "слушай, сообщение не сразу дошло. ты что имел в виду?",
-      "подожди, связь барахлит... я тут, что ты спросил?",
-      "хм, что-то с сетью было... расскажи подробнее?",
-    ];
-    return ruFallbacks[Math.floor(Math.random() * ruFallbacks.length)];
-  }
-
-  const enFallbacks = [
-    name ? `${name}, sorry, connection dropped for a sec... what were you saying?` : "sorry, connection dropped for a sec... what were you saying?",
-    "hey, my wifi lagged on my end for a second! what did you say?",
-    "wait, lost you for a second there... repeat that?",
-    "hold on, my messages were lagging a bit. what were you up to?",
-    "hmm, glitch on my end for a second... what were you thinking?",
-  ];
-  return enFallbacks[Math.floor(Math.random() * enFallbacks.length)];
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -390,80 +360,108 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     });
 
-    const lastUserText = sanitized[sanitized.length - 1]?.text || "";
-
     for (let modelIdx = 0; modelIdx < CANDIDATE_MODELS.length; modelIdx++) {
       if (clientClosed) break;
       const model = CANDIDATE_MODELS[modelIdx];
       let modelYieldedChunk = false;
 
       try {
-        // Fast streaming configuration with no thinking delay and maxOutputTokens for snappy responses
-        const responseStream = await ai.models.generateContentStream({
-          model,
-          contents,
-          config: {
-            systemInstruction: finalSystemInstruction,
-            temperature: 0.7,
-            topP: 0.95,
-            maxOutputTokens: 250,
-            safetySettings: GEMINI_SAFETY_SETTINGS,
-          },
-        });
-
-        const iterator = responseStream[Symbol.asyncIterator]();
-        let chunkTimer: any;
-
+        // Fast streaming configuration with minimal thinking latency and safety settings
+        let responseStream: any;
         try {
-          while (!clientClosed) {
-            const nextPromise = iterator.next().then((res: any) => {
-              clearTimeout(chunkTimer);
-              return res;
+          responseStream = await ai.models.generateContentStream({
+            model,
+            contents,
+            config: {
+              systemInstruction: finalSystemInstruction,
+              temperature: 0.7,
+              topP: 0.95,
+              thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+              safetySettings: GEMINI_SAFETY_SETTINGS,
+            },
+          });
+        } catch (streamErr: any) {
+          const sErrStr = (streamErr?.message || String(streamErr)).toLowerCase();
+          // Only retry without thinkingConfig if error is explicitly an argument/schema incompatibility
+          if (
+            sErrStr.includes("thinking") ||
+            sErrStr.includes("invalid argument") ||
+            sErrStr.includes("unknown field") ||
+            sErrStr.includes("unrecognized")
+          ) {
+            responseStream = await ai.models.generateContentStream({
+              model,
+              contents,
+              config: {
+                systemInstruction: finalSystemInstruction,
+                temperature: 0.7,
+                topP: 0.95,
+                safetySettings: GEMINI_SAFETY_SETTINGS,
+              },
             });
-            const timeoutPromise = new Promise<any>((_, reject) => {
-              chunkTimer = setTimeout(
-                () => reject(new Error(`Timeout on model ${model}`)),
-                4500
-              );
-            });
+          } else {
+            throw streamErr;
+          }
+        }
 
-            const { value: chunk, done } = await Promise.race([
-              nextPromise,
-              timeoutPromise,
-            ]);
-            clearTimeout(chunkTimer);
+        for await (const chunk of responseStream) {
+          if (clientClosed) break;
 
-            if (done) break;
+          // Check if Gemini safety ratings blocked the candidate or prompt
+          const candidate = chunk.candidates?.[0];
+          if (
+            candidate?.finishReason === "SAFETY" ||
+            chunk.promptFeedback?.blockReason === "SAFETY" ||
+            chunk.promptFeedback?.blockReason
+          ) {
+            res.write(`data: ${JSON.stringify({ text: VIOLATION_MESSAGE })}\n\n`);
+            modelYieldedChunk = true;
+            streamSuccess = true;
+            break;
+          }
 
-            // Check if Gemini safety ratings blocked the candidate or prompt
-            const candidate = chunk?.candidates?.[0];
-            if (
-              candidate?.finishReason === "SAFETY" ||
-              chunk?.promptFeedback?.blockReason === "SAFETY" ||
-              chunk?.promptFeedback?.blockReason
-            ) {
-              res.write(`data: ${JSON.stringify({ text: VIOLATION_MESSAGE })}\n\n`);
-              modelYieldedChunk = true;
-              streamSuccess = true;
-              break;
-            }
-
-            const text = chunk?.text;
-            if (text) {
-              modelYieldedChunk = true;
-              res.write(`data: ${JSON.stringify({ text })}\n\n`);
-              if (typeof (res as any).flush === "function") {
-                (res as any).flush();
-              }
+          const text = chunk.text;
+          if (text) {
+            modelYieldedChunk = true;
+            res.write(`data: ${JSON.stringify({ text })}\n\n`);
+            if (typeof (res as any).flush === "function") {
+              (res as any).flush();
             }
           }
-        } finally {
-          clearTimeout(chunkTimer);
         }
 
         if (modelYieldedChunk) {
           streamSuccess = true;
           break; // Successfully streamed from this model
+        }
+
+        // If streaming didn't yield text, try direct generateContent as fallback
+        if (!modelYieldedChunk && !clientClosed) {
+          const fullResponse = await ai.models.generateContent({
+            model,
+            contents,
+            config: {
+              systemInstruction: finalSystemInstruction,
+              temperature: 0.7,
+              topP: 0.95,
+              safetySettings: GEMINI_SAFETY_SETTINGS,
+            },
+          });
+
+          if (
+            fullResponse?.candidates?.[0]?.finishReason === "SAFETY" ||
+            fullResponse?.promptFeedback?.blockReason
+          ) {
+            res.write(`data: ${JSON.stringify({ text: VIOLATION_MESSAGE })}\n\n`);
+            streamSuccess = true;
+            break;
+          }
+
+          if (fullResponse?.text) {
+            res.write(`data: ${JSON.stringify({ text: fullResponse.text })}\n\n`);
+            streamSuccess = true;
+            break;
+          }
         }
       } catch (err: unknown) {
         const error = err as any;
@@ -492,45 +490,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ) {
           break;
         }
+
+        // If capacity overloaded (503 / 429 / overloaded), apply exponential backoff with jitter
+        if (
+          lower.includes("503") ||
+          lower.includes("overloaded") ||
+          lower.includes("unavailable") ||
+          lower.includes("high demand") ||
+          lower.includes("429") ||
+          lower.includes("resource_exhausted")
+        ) {
+          const backoffMs = 500 * Math.pow(1.5, modelIdx) + Math.random() * 300;
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
       }
     }
 
-    // If all candidate models were rate limited (429) or high demand (503),
-    // deliver a natural in-character reply so Dary ALWAYS responds and never leaves the user hanging!
     if (!streamSuccess && !clientClosed) {
       const lower = (lastErrorMessage || "").toLowerCase();
-      const isPermanentAuthError =
+      let friendlyError =
+        "I had a quick connection glitch for a moment. Tap retry or send your message again.";
+
+      if (
         lower.includes("leaked") ||
         lower.includes("revoked") ||
         lower.includes("permission_denied") ||
+        lower.includes("api key was reported as leaked")
+      ) {
+        friendlyError =
+          "The Gemini API key was reported as revoked or expired by Google. Please update your GEMINI_API_KEY in the Settings > Secrets panel with a fresh key from Google AI Studio.";
+      } else if (
         lower.includes("api_key_invalid") ||
-        lower.includes("not defined");
-
-      if (isPermanentAuthError) {
-        res.write(
-          `data: ${JSON.stringify({
-            error:
-              "GEMINI_API_KEY is missing or invalid. Please configure GEMINI_API_KEY in Settings > Secrets.",
-          })}\n\n`
-        );
-      } else {
-        // Natural in-character response so Dary always speaks
-        const fallbackText = getInCharacterFallback(
-          lastUserText,
-          userProfile,
-          customPersonality
-        );
-        const words = fallbackText.split(" ");
-        for (let i = 0; i < words.length; i++) {
-          if (clientClosed) break;
-          const chunkText = (i === 0 ? "" : " ") + words[i];
-          res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
-          if (typeof (res as any).flush === "function") {
-            (res as any).flush();
-          }
-          await new Promise((r) => setTimeout(r, 35));
-        }
+        lower.includes("api key not valid") ||
+        lower.includes("not defined")
+      ) {
+        friendlyError =
+          "GEMINI_API_KEY is missing or invalid. Please configure GEMINI_API_KEY in Settings > Secrets.";
+      } else if (
+        lower.includes("429") ||
+        lower.includes("quota") ||
+        lower.includes("resource_exhausted")
+      ) {
+        friendlyError =
+          "Gemini API rate limit reached. Please wait a brief moment and tap retry.";
+      } else if (
+        lower.includes("503") ||
+        lower.includes("high demand") ||
+        lower.includes("unavailable") ||
+        lower.includes("overloaded")
+      ) {
+        friendlyError =
+          "The AI service is experiencing high traffic right now. Please wait a few seconds and tap retry.";
+      } else if (lastErrorMessage) {
+        friendlyError = `AI service notice: ${lastErrorMessage}`;
       }
+
+      console.error("All candidate models failed. Last error:", lastErrorMessage);
+      res.write(`data: ${JSON.stringify({ error: friendlyError })}\n\n`);
     }
 
     res.write("data: [DONE]\n\n");
