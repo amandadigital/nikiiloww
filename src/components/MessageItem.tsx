@@ -203,11 +203,6 @@ export const MessageItem: FC<MessageItemProps> = ({
               {userName ? userName[0].toUpperCase() : <User size={14} />}
             </div>
           )}
-          {isVerifiedUser && (
-            <div className="absolute -bottom-1 -right-1">
-              <VerifiedBadge size="sm" />
-            </div>
-          )}
         </div>
       )}
     </motion.div>

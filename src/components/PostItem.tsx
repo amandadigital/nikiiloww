@@ -23,15 +23,18 @@ export const PostItem: FC<PostItemProps> = ({
   onDelete,
   canDelete = false,
 }) => {
-  // Only authentic verified users have the ability to make the verified badge seen for everyone
-  const cleanAuthor = post.authorUsername.toLowerCase().replace(/^@/, '');
-  const isSpecialVerified = cleanAuthor === 'kodewt' || cleanAuthor === 'misiori';
-  const isVerifiedUser = Boolean(post.isVerified) || isSpecialVerified;
+  // Only authentic verified users have the ability to have verified badges and decorations
+  const cleanUsername = post.authorUsername.toLowerCase().replace(/^@/, '');
+  const isVerifiedUser =
+    Boolean(post.isVerified) ||
+    cleanUsername === 'kodewt' ||
+    cleanUsername === 'misiori';
 
-  const hasBadge =
-    isSpecialVerified || (isVerifiedUser && post.decorations?.badge !== false);
-  const hasCustomBg = Boolean(post.decorations?.backgroundValue);
-  const bgOpacity = getBackgroundOpacity(post.decorations);
+  const hasBadge = isVerifiedUser && post.decorations?.badge !== false;
+  // Profile decorations are strictly for verified users
+  const activeDecorations = isVerifiedUser ? post.decorations : undefined;
+  const hasCustomBg = Boolean(activeDecorations?.backgroundValue);
+  const bgOpacity = getBackgroundOpacity(activeDecorations);
 
   const handleLikeClick = (e: MouseEvent) => {
     e.stopPropagation();
@@ -53,7 +56,7 @@ export const PostItem: FC<PostItemProps> = ({
           ? 'border border-white/20 text-white shadow-md'
           : 'bg-white dark:bg-[#151922] border border-gray-200/80 dark:border-gray-800/80 hover:border-gray-300 dark:hover:border-gray-700'
       }`}
-      style={hasCustomBg ? getBackgroundStyle(post.decorations) : undefined}
+      style={hasCustomBg ? getBackgroundStyle(activeDecorations) : undefined}
     >
       {/* Subtle dimming only if background opacity is explicitly set below 100% */}
       {hasCustomBg && bgOpacity < 1 && (
@@ -73,8 +76,8 @@ export const PostItem: FC<PostItemProps> = ({
             <DecoratedAvatar
               src={post.authorAvatar}
               name={post.authorName}
-              animation={post.decorations?.avatarAnimation || 'none'}
-              pulseColor={post.decorations?.pulseColor}
+              animation={activeDecorations?.avatarAnimation || 'none'}
+              pulseColor={activeDecorations?.pulseColor}
               size="sm"
             />
 
@@ -82,7 +85,7 @@ export const PostItem: FC<PostItemProps> = ({
               <div className="flex items-center gap-1.5 flex-wrap">
                 <DecoratedName
                   name={post.authorName}
-                  decorations={post.decorations}
+                  decorations={activeDecorations}
                   onCustomBg={hasCustomBg}
                   className="text-sm font-semibold truncate group-hover:text-white transition-colors"
                 />

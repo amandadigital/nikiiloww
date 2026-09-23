@@ -58,11 +58,11 @@ export const ProfileView: FC<ProfileViewProps> = ({
   const isOwnProfile =
     currentUser && profile && currentUser.username.toLowerCase() === profile.username.toLowerCase();
 
-  const profileUserClean = (profile?.username || '')
-    .toLowerCase()
-    .replace(/^@/, '');
   const isMisiori =
-    profileUserClean === 'misiori' || profileUserClean === 'kodewt';
+    Boolean(
+      profile?.username.toLowerCase() === 'misiori' ||
+      profile?.username.toLowerCase() === 'kodewt'
+    );
 
   const isVerified = isMisiori || Boolean(profile?.is_verified);
 
@@ -148,10 +148,11 @@ export const ProfileView: FC<ProfileViewProps> = ({
   }
 
   // Only authentic verified users have the ability to make the verified badge seen for everyone
-  const isProfileBadge =
-    isMisiori || (isVerified && profile.decorations?.badge !== false);
-  const hasCustomBg = Boolean(profile.decorations?.backgroundValue);
-  const bgOpacity = getBackgroundOpacity(profile.decorations);
+  const isProfileBadge = isVerified && profile.decorations?.badge !== false;
+  // Decorations are strictly for verified users
+  const activeDecorations = isVerified ? profile.decorations : undefined;
+  const hasCustomBg = Boolean(activeDecorations?.backgroundValue);
+  const bgOpacity = getBackgroundOpacity(activeDecorations);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto pb-24 md:pb-8 bg-[#fbfbfa] dark:bg-[#0b0d11]">
@@ -218,7 +219,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
               ? 'border border-white/20 text-white shadow-md'
               : 'bg-white dark:bg-[#151922] border border-gray-200/80 dark:border-gray-800/80'
           }`}
-          style={hasCustomBg ? getBackgroundStyle(profile.decorations) : undefined}
+          style={hasCustomBg ? getBackgroundStyle(activeDecorations) : undefined}
         >
           {/* Subtle dimming overlay only if opacity is explicitly reduced below 100% */}
           {hasCustomBg && bgOpacity < 1 && (
@@ -234,8 +235,8 @@ export const ProfileView: FC<ProfileViewProps> = ({
               <DecoratedAvatar
                 src={profile.avatar_url}
                 name={profile.name}
-                animation={profile.decorations?.avatarAnimation || 'none'}
-                pulseColor={profile.decorations?.pulseColor}
+                animation={activeDecorations?.avatarAnimation || 'none'}
+                pulseColor={activeDecorations?.pulseColor}
                 size="xl"
               />
             </div>
@@ -245,7 +246,7 @@ export const ProfileView: FC<ProfileViewProps> = ({
               <div className="flex items-center justify-center gap-1.5 flex-wrap">
                 <DecoratedName
                   name={profile.name}
-                  decorations={profile.decorations}
+                  decorations={activeDecorations}
                   onCustomBg={hasCustomBg}
                   className={`text-xl font-bold tracking-tight ${
                     hasCustomBg ? 'drop-shadow-sm' : ''

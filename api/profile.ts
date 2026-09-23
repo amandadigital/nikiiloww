@@ -147,10 +147,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         incomingUser === "misiori";
 
       const sanitizedProfile = { ...profile };
-      if (sanitizedProfile.decorations) {
+      if (!isVerified) {
+        sanitizedProfile.decorations = undefined;
+      } else if (sanitizedProfile.decorations) {
         sanitizedProfile.decorations = {
           ...sanitizedProfile.decorations,
-          badge: isVerified ? sanitizedProfile.decorations.badge !== false : false,
+          badge: sanitizedProfile.decorations.badge !== false,
         };
       }
 

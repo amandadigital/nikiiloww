@@ -114,48 +114,73 @@ export const MoreView: FC<MoreViewProps> = ({
               <span>version roadmap</span>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-white/10 text-white border border-white/20 text-[10px] font-mono font-medium">
-              v1.0
+              v1.01
             </span>
           </div>
 
-          <div className="pt-1">
-            {/* Current: v1.0 */}
+          <div className="pt-1 space-y-4">
+            {/* Current: v1.01 */}
             <div className="relative pl-5 pb-1 border-l-2 border-white">
               <div className="absolute -left-[5px] top-0 w-2 h-2 rounded-full bg-white ring-4 ring-white/20" />
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-white font-mono">
-                  v1.0 (current)
+                  v1.01 (current)
                 </span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-white/15 text-white border border-white/30 font-mono font-medium">
                   live
                 </span>
               </div>
 
-              {/* Exact user-requested bullet points */}
+              {/* Exact user-requested bullet points for v1.01 */}
               <ul className="text-xs text-gray-200 mt-2.5 space-y-1.5 font-sans">
                 <li className="flex items-center gap-1.5">
                   <span className="text-white font-bold font-mono">-</span>
-                  <span className="text-gray-200">feed with users' updates</span>
+                  <span className="text-gray-200">optimized interface for better experience</span>
                 </li>
                 <li className="flex items-center gap-1.5">
                   <span className="text-white font-bold font-mono">-</span>
-                  <span className="text-gray-200">chat with niki and custom prompts creator</span>
+                  <span className="text-gray-200">profile decorations beta test for verified users</span>
                 </li>
                 <li className="flex items-center gap-1.5">
                   <span className="text-white font-bold font-mono">-</span>
+                  <span className="text-gray-200">minor improvements</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Previous: v1.0 */}
+            <div className="relative pl-5 pb-1 border-l-2 border-white/20">
+              <div className="absolute -left-[5px] top-0 w-2 h-2 rounded-full bg-white/40" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-400 font-mono">
+                  v1.0
+                </span>
+              </div>
+
+              <ul className="text-xs text-gray-400 mt-2 space-y-1 font-sans">
+                <li className="flex items-center gap-1.5">
+                  <span className="text-gray-500 font-mono">-</span>
+                  <span>feed with users' updates</span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-gray-500 font-mono">-</span>
+                  <span>chat with niki and custom prompts creator</span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-gray-500 font-mono">-</span>
                   <a
                     href={discordUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-200 hover:text-white inline-flex items-center gap-1 transition"
+                    className="text-gray-400 hover:text-white inline-flex items-center gap-1 transition"
                   >
                     <span>discord server</span>
                     <ExternalLink size={11} className="text-[#5865F2]" />
                   </a>
                 </li>
                 <li className="flex items-center gap-1.5">
-                  <span className="text-white font-bold font-mono">-</span>
-                  <span className="text-gray-200">pwa app</span>
+                  <span className="text-gray-500 font-mono">-</span>
+                  <span>pwa app</span>
                 </li>
               </ul>
             </div>

@@ -148,11 +148,6 @@ export const SearchView: FC<SearchViewProps> = ({
                           className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
                           referrerPolicy="no-referrer"
                         />
-                        {user.is_verified && (
-                          <div className="absolute -bottom-0.5 -right-0.5">
-                            <VerifiedBadge size="sm" />
-                          </div>
-                        )}
                       </div>
 
                       <div className="min-w-0">

@@ -210,12 +210,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const isAuthorVerified =
         isSpecialVerified || Boolean(isVerified) || Boolean(authorProfile?.is_verified);
       const rawDecorations = decorations || authorProfile?.decorations || null;
-      const postDecorations = rawDecorations
-        ? {
-            ...rawDecorations,
-            badge: isAuthorVerified ? rawDecorations.badge !== false : false,
-          }
-        : null;
+      const postDecorations =
+        isAuthorVerified && rawDecorations
+          ? {
+              ...rawDecorations,
+              badge: rawDecorations.badge !== false,
+            }
+          : null;
 
       const postPayload: Record<string, any> = {
         user_id: userId,

@@ -92,6 +92,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
     return isVerifiedAccount && existingDeco.badge !== false;
   });
 
+  const [decoNotice, setDecoNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -184,17 +185,16 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
       return;
     }
 
+    const finalDecorations = isUserVerifiedNow ? currentDecorations : undefined;
+
     const updatedProfile: UserProfile = {
       ...userProfile,
       name: name.trim() || trimmedUsername,
       username: trimmedUsername,
       bio: bio.trim(),
       avatar_url: avatarUrl,
-      is_verified:
-        trimmedUsername === 'kodewt' ||
-        trimmedUsername === 'misiori' ||
-        userProfile.is_verified,
-      decorations: currentDecorations,
+      is_verified: isUserVerifiedNow,
+      decorations: finalDecorations,
     };
 
     // Instant visual update & close modal
@@ -207,7 +207,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
       username: trimmedUsername,
       bio: bio.trim(),
       avatar_url: avatarUrl,
-      decorations: currentDecorations,
+      decorations: finalDecorations,
     } as any).catch((err) => {
       console.warn('Profile background update notice:', err);
     });
@@ -259,7 +259,14 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setActiveSection('deco')}
+              onClick={() => {
+                setActiveSection('deco');
+                if (!isUserVerifiedNow) {
+                  setDecoNotice("we're still testing this feature. come back later!");
+                } else {
+                  setDecoNotice(null);
+                }
+              }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeSection === 'deco'
                   ? 'bg-white text-black font-bold shadow-xs'
@@ -268,11 +275,29 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
             >
               <Sparkles size={13} />
               <span>deco</span>
+              {!isUserVerifiedNow && (
+                <span className="text-[9px] px-1.5 py-0.2 rounded-sm bg-white/15 text-white border border-white/30 font-mono font-medium">
+                  beta
+                </span>
+              )}
             </button>
           </div>
 
           {/* Form scrollable area */}
           <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            {decoNotice && (
+              <div className="p-3 rounded-xl bg-white/10 border border-white/20 text-xs text-white flex items-center justify-between shadow-xs">
+                <span>{decoNotice}</span>
+                <button
+                  type="button"
+                  onClick={() => setDecoNotice(null)}
+                  className="text-gray-400 hover:text-white p-0.5 cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+
             {error && (
               <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
                 <AlertCircle size={14} className="shrink-0" />
@@ -385,7 +410,23 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
 
             {/* SECTION 2: DECO */}
             {activeSection === 'deco' && (
-              <div className="space-y-5">
+              !isUserVerifiedNow ? (
+                <div className="py-14 px-4 text-center flex flex-col items-center justify-center space-y-3.5 select-none">
+                  <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white shadow-xs">
+                    <Sparkles size={22} className="text-white" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white tracking-tight">
+                    profile decorations
+                  </h3>
+                  <p className="text-xs text-gray-300 max-w-xs font-sans leading-relaxed">
+                    we&apos;re still testing this feature. come back later!
+                  </p>
+                  <span className="px-3 py-1 rounded-full bg-white/10 text-white border border-white/20 text-[10px] font-mono font-medium">
+                    beta test for verified users
+                  </span>
+                </div>
+              ) : (
+                <div className="space-y-5">
                 {/* Live Preview Card (Chosen background fully replaces gray) */}
                 <div
                   className={`p-4 rounded-2xl relative overflow-hidden transition-all duration-300 ${
@@ -821,7 +862,7 @@ export const EditProfileModal: FC<EditProfileModalProps> = ({
                   )}
                 </div>
               </div>
-            )}
+            ))}
 
             {/* Bottom Actions */}
             <div className="pt-3 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-end gap-2.5">

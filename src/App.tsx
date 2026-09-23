@@ -15,6 +15,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { IntroAnimation } from './components/IntroAnimation';
 import { VisualisationModal } from './components/VisualisationModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { UpdateModal } from './components/UpdateModal';
 import { PanelLeftOpen } from 'lucide-react';
 import {
   ActiveTab,
@@ -80,6 +81,21 @@ export default function App() {
 
   // Welcome Intro Animation state (plays on entering the website)
   const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(() => false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
+
+  const handleIntroComplete = () => {
+    setHasSeenIntro(true);
+    // If first time visiting after the v1.01 update, show the welcome update modal
+    const hasSeenV101 = localStorage.getItem('has_seen_v101_modal');
+    if (!hasSeenV101) {
+      setIsUpdateModalOpen(true);
+    }
+  };
+
+  const handleCloseUpdateModal = () => {
+    setIsUpdateModalOpen(false);
+    localStorage.setItem('has_seen_v101_modal', 'true');
+  };
 
   // Accent & Background color themes (default: rose)
   // Accent color, theme & wallpaper state
@@ -543,12 +559,13 @@ export default function App() {
       userProfile.username.toLowerCase() === 'kodewt' ||
       userProfile.username.toLowerCase() === 'misiori';
     const isVerifiedUser = isSpecialVerified || Boolean(userProfile.is_verified);
-    const sanitizedDeco = userProfile.decorations
-      ? {
-          ...userProfile.decorations,
-          badge: isVerifiedUser ? userProfile.decorations.badge !== false : false,
-        }
-      : undefined;
+    const sanitizedDeco =
+      isVerifiedUser && userProfile.decorations
+        ? {
+            ...userProfile.decorations,
+            badge: userProfile.decorations.badge !== false,
+          }
+        : undefined;
 
     const optimisticPost: Post = {
       id: tempId,
@@ -1255,8 +1272,14 @@ export default function App() {
 
       {/* Welcome Animated Intro (Welcome to naisuru -> small circle -> app emerges) */}
       {!hasSeenIntro && (
-        <IntroAnimation onComplete={() => setHasSeenIntro(true)} />
+        <IntroAnimation onComplete={handleIntroComplete} />
       )}
+
+      {/* v1.01 Update Modal for first-time visitors after update */}
+      <UpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={handleCloseUpdateModal}
+      />
 
       {/* Edit Profile Modal */}
       {userProfile && (

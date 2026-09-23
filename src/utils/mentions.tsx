@@ -17,9 +17,9 @@ export function renderMentions(
   return parts.map((part, index) => {
     if (part.startsWith('@')) {
       const rawUsername = part.slice(1);
-      const cleanLower = rawUsername.toLowerCase().replace(/^@/, '');
-      const isSpecialVerified =
-        cleanLower === 'kodewt' || cleanLower === 'misiori';
+      const isVerifiedMention =
+        rawUsername.toLowerCase() === 'kodewt' ||
+        rawUsername.toLowerCase() === 'misiori';
 
       return (
         <button
@@ -32,14 +32,14 @@ export function renderMentions(
             }
           }}
           className={`inline-flex items-center gap-1 font-medium transition-colors cursor-pointer hover:underline text-white ${
-            isSpecialVerified
+            isVerifiedMention
               ? 'font-bold underline decoration-white/50'
               : 'font-semibold underline decoration-white/30'
           }`}
           title={`View @${rawUsername}'s profile`}
         >
           <span>{part}</span>
-          {isSpecialVerified && <VerifiedBadge size="sm" />}
+          {isVerifiedMention && <VerifiedBadge size="sm" />}
         </button>
       );
     }
